@@ -2,13 +2,7 @@ import { PrismaClient } from '@prisma/client';
 // @ts-ignore
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL || "postgresql://erp_admin:Avario050306@db:5432/erp_saas_db?schema=public"
-    }
-  }
-});
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding initial data...');
