@@ -13,9 +13,11 @@ import { ReportingModule } from './reporting/reporting.module';
 import { DocumentModule } from './document/document.module';
 import { AutomationModule } from './automation/automation.module';
 import { PlatformModule } from './platform/platform.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [InventoryModule, PrismaModule, AssetModule, MaintenanceModule, FinanceModule, GlModule, AccountingModule, AnalyticsModule, ReportingModule, DocumentModule, AutomationModule, PlatformModule],
+  imports: [InventoryModule, PrismaModule, AssetModule, MaintenanceModule, FinanceModule, GlModule, AccountingModule, AnalyticsModule, ReportingModule, DocumentModule, AutomationModule, PlatformModule, AuthModule, UsersModule],
   controllers: [AppController],
   providers: [AppService],
 })
