@@ -1,11 +1,11 @@
 # Build Stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /usr/src/app
 
 # Install all dependencies (including dev tools needed for build)
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy all source code
 COPY . .
@@ -15,13 +15,13 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production Stage
-FROM node:18-alpine
+FROM node:22-alpine
 
 WORKDIR /usr/src/app
 
 # Install only production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy built artifacts from the builder stage
 COPY --from=builder /usr/src/app/prisma ./prisma
