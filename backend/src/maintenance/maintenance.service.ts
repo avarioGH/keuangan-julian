@@ -19,7 +19,7 @@ export class MaintenanceService {
       include: { asset: true }
     });
 
-    const createdWorkOrders = [];
+    const createdWorkOrders: any[] = [];
 
     for (const schedule of dueSchedules) {
       await this.prisma.$transaction(async (tx) => {

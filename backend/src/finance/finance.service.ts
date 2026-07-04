@@ -87,7 +87,7 @@ export class FinanceService {
     return this.prisma.$transaction(async (tx) => {
       // Validasi Saldo
       const account = await tx.cashAccount.findUnique({ where: { id: data.cashAccountId } });
-      if (!account || account.current_balance < data.amount) {
+      if (!account || Number(account.current_balance) < data.amount) {
         throw new BadRequestException('Insufficient balance in Cash Account');
       }
 

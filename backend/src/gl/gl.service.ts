@@ -34,10 +34,13 @@ export class GlService {
     const journal = await tx.journalEntry.create({
       data: {
         company_id: data.companyId,
-        entry_date: data.entryDate,
+        journal_no: `JNL-${Date.now()}`,
+        journal_date: data.entryDate,
         reference_type: data.referenceType,
         reference_id: data.referenceId,
         description: data.description,
+        status: 'Posted',
+        created_by: 'SYSTEM'
       }
     });
 
@@ -46,7 +49,7 @@ export class GlService {
       if (item.debit > 0 || item.credit > 0) {
         await tx.journalEntryItem.create({
           data: {
-            journal_id: journal.id,
+            journal_entry_id: journal.id,
             account_id: item.accountId,
             debit: item.debit,
             credit: item.credit,

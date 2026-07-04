@@ -77,7 +77,7 @@ export class AnalyticsService {
    * Di-trigger oleh Cron Job (misal tiap malam) dan menyimpan alert ke tabel BusinessInsight.
    */
   async generateBusinessInsights(companyId: string) {
-    const insights = [];
+    const insights: any[] = [];
 
     // Rule 1: Dead Stock Detection
     const deadStocks = await this.prisma.warehouseStock.findMany({
