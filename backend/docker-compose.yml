@@ -33,7 +33,7 @@ services:
       dockerfile: Dockerfile
     container_name: erp_api
     environment:
-      DATABASE_URL: "postgresql://erp_admin:erp_password_secure@db:5432/erp_saas_db?schema=public"
+      DATABASE_URL: "postgresql://erp_admin:Avario050306@db:5432/erp_saas_db?schema=public"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: "production"
       PORT: "3000"
