@@ -75,9 +75,7 @@ export default function UsersManagementPage() {
         <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
         
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>+ Create Admin</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button>+ Create Admin</Button>} />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Admin</DialogTitle>
