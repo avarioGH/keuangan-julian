@@ -3,7 +3,11 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient({
-  datasourceUrl: process.env.DATABASE_URL || "postgresql://erp_admin:Avario050306@db:5432/erp_saas_db?schema=public",
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "postgresql://erp_admin:Avario050306@db:5432/erp_saas_db?schema=public"
+    }
+  }
 });
 
 async function main() {
