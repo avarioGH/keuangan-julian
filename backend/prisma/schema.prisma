@@ -1,0 +1,1387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id         String  @id @default(uuid())
+  tenant_id  String?
+  tenant     Tenant? @relation(fields: [tenant_id], references: [id])
+  name       String
+  logo       String?
+  address    String?
+  phone      String?
+  email      String?
+  tax_number String?
+  timezone   String  @default("Asia/Jakarta")
+  currency   String  @default("IDR")
+
+  // Relations
+  settings        CompanySetting?
+  roles           Role[]
+  users           User[]
+  warehouses      Warehouse[]
+  suppliers       Supplier[]
+  categories      Category[]
+  units           Unit[]
+  brands          Brand[]
+  products        Product[]
+  assetCategories AssetCategory[]
+  assets          AssetMaster[]
+  transactions    InventoryTransaction[]
+  
+  // Phase 5 Finance
+  cash_accounts     CashAccount[]
+  finance_categories FinanceCategory[]
+  finance_transactions FinanceTransaction[]
+  petty_cashes      PettyCash[]
+  budgets           Budget[]
+  reconciliations   Reconciliation[]
+
+  // Phase 6 Accounting
+  account_types      AccountType[]
+  chart_of_accounts  ChartOfAccount[]
+  journal_entries    JournalEntry[]
+  fiscal_years       FiscalYear[]
+  accounting_periods AccountingPeriod[]
+  journal_adjustments JournalAdjustment[]
+  journal_reversals  JournalReversal[]
+
+  // Phase 7 BI
+  dashboard_layouts  DashboardLayout[]
+  dashboard_widgets  DashboardWidget[]
+  business_insights  BusinessInsight[]
+
+  // Phase 8 Reporting & Document
+  report_schedules   ReportSchedule[]
+  report_export_logs ReportExportLog[]
+  documents          DocumentMaster[]
+
+  // Phase 9 Automation
+  workflows          WorkflowMaster[]
+  approval_requests  ApprovalRequest[]
+  inbox_messages     InternalInbox[]
+  user_tasks         UserTask[]
+  notif_templates    NotificationTemplate[]
+  automation_logs    AutomationLog[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model CompanySetting {
+  id                   String  @id @default(uuid())
+  company_id           String  @unique
+  company              Company @relation(fields: [company_id], references: [id])
+  currency             String  @default("IDR")
+  timezone             String  @default("Asia/Jakarta")
+  language             String  @default("id")
+  tax_percentage       Decimal @default(11.0) @db.Decimal(5, 2)
+  logo                 String?
+  invoice_prefix       String  @default("INV-")
+  barcode_prefix       String  @default("BRC-")
+  default_warehouse_id String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  company_id  String?
+  company     Company? @relation(fields: [company_id], references: [id])
+  name        String
+  description String?
+  is_system   Boolean  @default(false)
+  is_active   Boolean  @default(true)
+
+  permissions RolePermission[]
+  users       User[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, name])
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model RolePermission {
+  id            String     @id @default(uuid())
+  role_id       String
+  role          Role       @relation(fields: [role_id], references: [id])
+  permission_id String
+  permission    Permission @relation(fields: [permission_id], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@unique([role_id, permission_id])
+}
+
+model User {
+  id         String    @id @default(uuid())
+  company_id String
+  company    Company   @relation(fields: [company_id], references: [id])
+  role_id    String
+  role       Role      @relation(fields: [role_id], references: [id])
+  name       String
+  email      String    @unique
+  phone      String?
+  password   String
+  avatar     String?
+  status     Boolean   @default(true)
+  last_login DateTime?
+
+  created_transactions  InventoryTransaction[] @relation("CreatedTransactions")
+  approved_transactions InventoryTransaction[] @relation("ApprovedTransactions")
+  stock_movements       StockMovement[]
+
+  // EAM Relations
+  user_assets           AssetMaster[]     @relation("UserAssets")
+  performed_asset_histories AssetHistory[] @relation("PerformedAssetHistories")
+  created_asset_locations AssetLocation[]   @relation("CreatedAssetLocations")
+  assigned_assets       AssetAssignment[] @relation("AssignedAssets")
+  borrowed_assets       AssetBorrowing[]  @relation("BorrowedAssets")
+  approved_asset_borrowings AssetBorrowing[] @relation("ApprovedAssetBorrowings")
+  created_maintenance_logs MaintenanceLog[] @relation("CreatedMaintenanceLogs")
+  assigned_work_orders  WorkOrder[]       @relation("AssignedWorkOrders")
+  created_work_orders   WorkOrder[]       @relation("CreatedWorkOrders")
+  uploaded_asset_documents AssetDocument[] @relation("UploadedAssetDocuments")
+
+  // Finance Relations
+  created_finance_tx    FinanceTransaction[] @relation("CreatedFinanceTx")
+  approved_finance_tx   FinanceTransaction[] @relation("ApprovedFinanceTx")
+  uploaded_finance_docs FinanceDocument[]    @relation("UploadedFinanceDocs")
+  petty_cash_accounts   PettyCash[]          @relation("PettyCashEmployee")
+  approved_reconciliations Reconciliation[]  @relation("ApprovedReconciliations")
+
+  // Accounting Relations
+  created_journals      JournalEntry[]       @relation("CreatedJournals")
+  approved_journals     JournalEntry[]       @relation("ApprovedJournals")
+  closed_fiscal_years   FiscalYear[]         @relation("ClosedFiscalYears")
+  created_adjustments   JournalAdjustment[]  @relation("CreatedAdjustments")
+  approved_adjustments  JournalAdjustment[]  @relation("ApprovedAdjustments")
+  created_reversals     JournalReversal[]    @relation("CreatedReversals")
+
+  // BI Relations
+  dashboard_layouts     DashboardLayout[]    @relation("DashboardLayouts")
+  dashboard_widgets     DashboardWidget[]    @relation("DashboardWidgets")
+
+  // Phase 8 Relations
+  scheduled_reports        ReportSchedule[]    @relation("ScheduledReports")
+  export_logs              ReportExportLog[]   @relation("ExportLogs")
+  uploaded_documents       DocumentMaster[]    @relation("UploadedDocuments")
+  uploaded_document_vers   DocumentVersion[]   @relation("UploadedDocumentVersions")
+  created_share_links      DocumentShareLink[] @relation("CreatedShareLinks")
+
+  // Phase 9 Relations
+  pending_approvals        ApprovalRequest[]   @relation("PendingApprovals")
+  approval_history         ApprovalLog[]       @relation("ApprovalHistory")
+  inbox_messages           InternalInbox[]     @relation("UserInbox")
+  tasks                    UserTask[]          @relation("UserTasks")
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model Warehouse {
+  id          String  @id @default(uuid())
+  company_id  String
+  company     Company @relation(fields: [company_id], references: [id])
+  code        String
+  name        String
+  address     String?
+  pic         String?
+  phone       String?
+  description String?
+  status      Boolean @default(true)
+
+  transactions_as_origin InventoryTransaction[] @relation("TransactionWarehouse")
+  transactions_as_target InventoryTransaction[] @relation("TransactionTargetWarehouse")
+  stock_movements        StockMovement[]
+  warehouse_stocks       WarehouseStock[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, code])
+}
+
+model Supplier {
+  id         String  @id @default(uuid())
+  company_id String
+  company    Company @relation(fields: [company_id], references: [id])
+  code       String
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  pic        String?
+  tax_number String?
+  notes      String?
+  status     Boolean @default(true)
+
+  products Product[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, code])
+}
+
+model Category {
+  id         String     @id @default(uuid())
+  company_id String
+  company    Company    @relation(fields: [company_id], references: [id])
+  parent_id  String?
+  parent     Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children   Category[] @relation("CategoryHierarchy")
+  name       String
+
+  products Product[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model Unit {
+  id         String  @id @default(uuid())
+  company_id String
+  company    Company @relation(fields: [company_id], references: [id])
+  name       String
+
+  products Product[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model Brand {
+  id         String  @id @default(uuid())
+  company_id String
+  company    Company @relation(fields: [company_id], references: [id])
+  name       String
+
+  products Product[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  company_id  String
+  company     Company   @relation(fields: [company_id], references: [id])
+  category_id String?
+  category    Category? @relation(fields: [category_id], references: [id])
+  brand_id    String?
+  brand       Brand?    @relation(fields: [brand_id], references: [id])
+  unit_id     String
+  unit        Unit      @relation(fields: [unit_id], references: [id])
+  supplier_id String?
+  supplier    Supplier? @relation(fields: [supplier_id], references: [id])
+
+  code           String
+  barcode        String?
+  name           String
+  description    String?
+  purchase_price Decimal  @db.Decimal(15, 2)
+  selling_price  Decimal  @db.Decimal(15, 2)
+  minimum_stock  Int      @default(0)
+  weight         Decimal? @db.Decimal(10, 2)
+  length         Decimal? @db.Decimal(10, 2)
+  width          Decimal? @db.Decimal(10, 2)
+  height         Decimal? @db.Decimal(10, 2)
+  image          String?
+  status         Boolean  @default(true)
+
+  images            ProductImage[]
+  documents         ProductDocument[]
+  transaction_items InventoryTransactionItem[]
+  stock_movements   StockMovement[]
+  warehouse_stocks  WarehouseStock[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, code])
+  @@unique([company_id, barcode])
+}
+
+model ProductImage {
+  id         String  @id @default(uuid())
+  product_id String
+  product    Product @relation(fields: [product_id], references: [id])
+  image_url  String
+  is_primary Boolean @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model ProductDocument {
+  id            String  @id @default(uuid())
+  product_id    String
+  product       Product @relation(fields: [product_id], references: [id])
+  document_url  String
+  document_type String
+  title         String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+// =======================
+// ENTERPRISE ASSET MANAGEMENT (PHASE 4)
+// =======================
+
+model AssetCategory {
+  id          String          @id @default(uuid())
+  company_id  String
+  company     Company         @relation(fields: [company_id], references: [id])
+  parent_id   String?
+  parent      AssetCategory?  @relation("AssetCategoryHierarchy", fields: [parent_id], references: [id])
+  children    AssetCategory[] @relation("AssetCategoryHierarchy")
+  
+  name        String
+  code        String?
+  description String?
+  icon        String?
+  color       String?
+  status      Boolean         @default(true)
+
+  assets      AssetMaster[]
+
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  deleted_at  DateTime?
+}
+
+model AssetMaster {
+  id                  String          @id @default(uuid())
+  company_id          String
+  company             Company         @relation(fields: [company_id], references: [id])
+  category_id         String
+  category            AssetCategory   @relation(fields: [category_id], references: [id])
+  warehouse_id        String?
+  
+  assigned_user_id    String?
+  assigned_user       User?           @relation("UserAssets", fields: [assigned_user_id], references: [id])
+  
+  asset_code          String
+  asset_name          String
+  brand               String?
+  model               String?
+  serial_number       String?
+  barcode             String?         @unique
+  qr_code             String?         @unique
+  
+  purchase_date       DateTime?
+  purchase_price      Decimal         @db.Decimal(15, 2) @default(0)
+  supplier_id         String?
+  
+  current_value       Decimal         @db.Decimal(15, 2) @default(0)
+  useful_life         Int?            // In months
+  depreciation_method String?         // Straight Line, Declining Balance
+  
+  location            String?
+  status              String          // ACTIVE, BORROWED, MAINTENANCE, BROKEN, DISPOSED, SOLD, LOST
+  condition           String          // EXCELLENT, GOOD, FAIR, DAMAGED, BROKEN
+  
+  warranty_until      DateTime?
+  notes               String?
+  image               String?
+  manual_file         String?
+  invoice_file        String?
+
+  histories           AssetHistory[]
+  locations           AssetLocation[]
+  assignments         AssetAssignment[]
+  borrowings          AssetBorrowing[]
+  maintenances        MaintenanceLog[]
+  schedules           MaintenanceSchedule[]
+  documents           AssetDocument[]
+  depreciations       DepreciationLog[]
+  work_orders         WorkOrder[]
+
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  deleted_at          DateTime?
+
+  @@unique([company_id, asset_code])
+}
+
+model AssetHistory {
+  id           String      @id @default(uuid())
+  asset_id     String
+  asset        AssetMaster @relation(fields: [asset_id], references: [id])
+  action       String
+  before_data  Json?
+  after_data   Json?
+  performed_by String
+  user         User        @relation("PerformedAssetHistories", fields: [performed_by], references: [id])
+  
+  performed_at DateTime    @default(now())
+}
+
+model AssetLocation {
+  id            String      @id @default(uuid())
+  asset_id      String
+  asset         AssetMaster @relation(fields: [asset_id], references: [id])
+  from_location String?
+  to_location   String
+  from_user     String?
+  to_user       String?
+  notes         String?
+  
+  created_by    String
+  user          User        @relation("CreatedAssetLocations", fields: [created_by], references: [id])
+  moved_at      DateTime    @default(now())
+}
+
+model AssetAssignment {
+  id          String      @id @default(uuid())
+  asset_id    String
+  asset       AssetMaster @relation(fields: [asset_id], references: [id])
+  user_id     String
+  user        User        @relation("AssignedAssets", fields: [user_id], references: [id])
+  
+  assigned_at DateTime    @default(now())
+  returned_at DateTime?
+  status      String      // ACTIVE, RETURNED
+  notes       String?
+}
+
+model AssetBorrowing {
+  id                 String      @id @default(uuid())
+  asset_id           String
+  asset              AssetMaster @relation(fields: [asset_id], references: [id])
+  borrower           String
+  user               User        @relation("BorrowedAssets", fields: [borrower], references: [id])
+  department         String?
+  
+  borrow_date        DateTime
+  return_date        DateTime
+  actual_return_date DateTime?
+  
+  status             String      // PENDING, BORROWED, RETURNED, OVERDUE, CANCELLED
+  approved_by        String?
+  approver           User?       @relation("ApprovedAssetBorrowings", fields: [approved_by], references: [id])
+  notes              String?
+  
+  created_at         DateTime    @default(now())
+  updated_at         DateTime    @updatedAt
+}
+
+model MaintenanceLog {
+  id                String      @id @default(uuid())
+  asset_id          String
+  asset             AssetMaster @relation(fields: [asset_id], references: [id])
+  maintenance_type  String      // Preventive, Corrective, Emergency, Calibration, Inspection
+  vendor            String?
+  cost              Decimal     @db.Decimal(15, 2) @default(0)
+  description       String?
+  
+  before_photo      String?
+  after_photo       String?
+  invoice           String?
+  
+  service_date      DateTime
+  next_service_date DateTime?
+  technician        String?
+  status            String      // SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+  
+  created_by        String
+  user              User        @relation("CreatedMaintenanceLogs", fields: [created_by], references: [id])
+  
+  created_at        DateTime    @default(now())
+  updated_at        DateTime    @updatedAt
+}
+
+model MaintenanceSchedule {
+  id             String      @id @default(uuid())
+  asset_id       String
+  asset          AssetMaster @relation(fields: [asset_id], references: [id])
+  interval_type  String      // DAYS, MONTHS, YEARS, USAGE_HOURS, KM
+  interval_value Int
+  
+  last_schedule  DateTime?
+  next_schedule  DateTime
+  status         String      // ACTIVE, PAUSED
+  
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+}
+
+model WorkOrder {
+  id              String      @id @default(uuid())
+  asset_id        String
+  asset           AssetMaster @relation(fields: [asset_id], references: [id])
+  wo_number       String      @unique
+  title           String
+  description     String?
+  maintenance_type String
+  priority        String      // LOW, MEDIUM, HIGH, CRITICAL
+  
+  assigned_to     String?
+  technician      User?       @relation("AssignedWorkOrders", fields: [assigned_to], references: [id])
+  
+  estimated_hours Decimal?    @db.Decimal(10, 2)
+  actual_hours    Decimal?    @db.Decimal(10, 2)
+  cost            Decimal     @db.Decimal(15, 2) @default(0)
+  
+  status          String      // OPEN, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED
+  
+  started_at      DateTime?
+  completed_at    DateTime?
+  
+  created_by      String
+  user            User        @relation("CreatedWorkOrders", fields: [created_by], references: [id])
+  
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+}
+
+model AssetDocument {
+  id            String      @id @default(uuid())
+  asset_id      String
+  asset         AssetMaster @relation(fields: [asset_id], references: [id])
+  document_type String      // Manual, Invoice, Warranty, Certificate, Photo, License, Other
+  file_name     String
+  file_url      String
+  
+  uploaded_by   String
+  user          User        @relation("UploadedAssetDocuments", fields: [uploaded_by], references: [id])
+  
+  uploaded_at   DateTime    @default(now())
+}
+
+model DepreciationLog {
+  id            String      @id @default(uuid())
+  asset_id      String
+  asset         AssetMaster @relation(fields: [asset_id], references: [id])
+  period        String      // e.g. "2026-07"
+  opening_value Decimal     @db.Decimal(15, 2)
+  depreciation  Decimal     @db.Decimal(15, 2)
+  closing_value Decimal     @db.Decimal(15, 2)
+  
+  created_at    DateTime    @default(now())
+}
+
+model AuditLog {
+  id         String  @id @default(uuid())
+  company_id String?
+  user_id    String?
+  ip_address String?
+  browser    String?
+  device     String?
+
+  action    String
+  entity    String
+  entity_id String?
+
+  before_data Json?
+  after_data  Json?
+
+  created_at DateTime @default(now())
+}
+
+// =======================
+// INVENTORY & STOCK LEDGER (PHASE 3)
+// =======================
+
+model InventoryTransaction {
+  id                  String     @id @default(uuid())
+  company_id          String
+  company             Company    @relation(fields: [company_id], references: [id])
+  transaction_no      String
+  transaction_type    String // IN, OUT, TRANSFER, ADJUSTMENT, OPNAME, RETURN
+  warehouse_id        String
+  warehouse           Warehouse  @relation("TransactionWarehouse", fields: [warehouse_id], references: [id])
+  target_warehouse_id String?
+  target_warehouse    Warehouse? @relation("TransactionTargetWarehouse", fields: [target_warehouse_id], references: [id])
+  reference_type      String?
+  reference_id        String?
+  status              String // Draft, Pending, Approved, Rejected, Cancelled
+  transaction_date    DateTime
+  notes               String?
+
+  created_by    String
+  user_created  User      @relation("CreatedTransactions", fields: [created_by], references: [id])
+  approved_by   String?
+  user_approved User?     @relation("ApprovedTransactions", fields: [approved_by], references: [id])
+  approved_at   DateTime?
+
+  items InventoryTransactionItem[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, transaction_no])
+}
+
+model InventoryTransactionItem {
+  id             String               @id @default(uuid())
+  transaction_id String
+  transaction    InventoryTransaction @relation(fields: [transaction_id], references: [id])
+  product_id     String
+  product        Product              @relation(fields: [product_id], references: [id])
+  qty            Int
+  unit_cost      Decimal              @default(0) @db.Decimal(15, 2)
+  subtotal       Decimal              @default(0) @db.Decimal(15, 2)
+  batch_number   String?
+  expired_date   DateTime?
+  notes          String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model StockMovement {
+  id           String    @id @default(uuid())
+  company_id   String
+  warehouse_id String
+  warehouse    Warehouse @relation(fields: [warehouse_id], references: [id])
+  product_id   String
+  product      Product   @relation(fields: [product_id], references: [id])
+
+  transaction_type String // IN, OUT, TRANSFER, ADJUSTMENT, OPNAME, RETURN
+  transaction_id   String?
+  movement_type    String // IN, OUT, TRANSFER_IN, TRANSFER_OUT, ADJUSTMENT_PLUS, ADJUSTMENT_MINUS, OPNAME, RETURN
+
+  qty_in        Int @default(0)
+  qty_out       Int @default(0)
+  balance_after Int @default(0)
+
+  unit_cost  Decimal @default(0) @db.Decimal(15, 2)
+  total_cost Decimal @default(0) @db.Decimal(15, 2)
+
+  batch_number     String?
+  expired_date     DateTime?
+  reference_number String?
+  remarks          String?
+
+  created_by String
+  user       User   @relation(fields: [created_by], references: [id])
+
+  created_at DateTime @default(now())
+}
+
+model WarehouseStock {
+  id           String    @id @default(uuid())
+  company_id   String
+  warehouse_id String
+  warehouse    Warehouse @relation(fields: [warehouse_id], references: [id])
+  product_id   String
+  product      Product   @relation(fields: [product_id], references: [id])
+
+  current_stock   Int @default(0)
+  reserved_stock  Int @default(0)
+  available_stock Int @default(0)
+
+  updated_at DateTime @updatedAt
+
+  @@unique([company_id, warehouse_id, product_id])
+}
+
+// =======================
+// FINANCE MANAGEMENT (PHASE 5)
+// =======================
+
+model CashAccount {
+  id              String   @id @default(uuid())
+  company_id      String
+  company         Company  @relation(fields: [company_id], references: [id])
+  code            String
+  name            String
+  account_type    String   // Cash, Bank, Petty Cash, Digital Wallet
+  currency        String   @default("IDR")
+  
+  opening_balance Decimal  @db.Decimal(15, 2) @default(0)
+  current_balance Decimal  @db.Decimal(15, 2) @default(0)
+  status          Boolean  @default(true)
+  
+  transactions    FinanceTransaction[]
+  reconciliations Reconciliation[]
+  petty_cashes    PettyCash[]
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  deleted_at      DateTime?
+
+  @@unique([company_id, code])
+}
+
+model FinanceCategory {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  parent_id   String?
+  parent      FinanceCategory? @relation("FinanceCatHierarchy", fields: [parent_id], references: [id])
+  children    FinanceCategory[] @relation("FinanceCatHierarchy")
+  name        String
+  type        String   // Income, Expense, Transfer, Adjustment
+  color       String?
+  icon        String?
+  status      Boolean  @default(true)
+  
+  items       FinanceTransactionItem[]
+  budgets     Budget[]
+}
+
+model FinanceTransaction {
+  id               String   @id @default(uuid())
+  company_id       String
+  company          Company  @relation(fields: [company_id], references: [id])
+  transaction_no   String
+  transaction_type String   // Cash In, Cash Out, Transfer, Expense, Income, Adjustment
+  cash_account_id  String
+  cash_account     CashAccount @relation(fields: [cash_account_id], references: [id])
+  
+  reference_type   String?
+  reference_id     String?
+  transaction_date DateTime
+  status           String   // Draft, Pending, Approved, Rejected, Cancelled, Reversed
+  description      String?
+  total_amount     Decimal  @db.Decimal(15, 2) @default(0)
+  
+  created_by       String
+  user_created     User     @relation("CreatedFinanceTx", fields: [created_by], references: [id])
+  approved_by      String?
+  user_approved    User?    @relation("ApprovedFinanceTx", fields: [approved_by], references: [id])
+  approved_at      DateTime?
+  
+  items            FinanceTransactionItem[]
+  documents        FinanceDocument[]
+  
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  deleted_at       DateTime?
+
+  @@unique([company_id, transaction_no])
+}
+
+model FinanceTransactionItem {
+  id              String   @id @default(uuid())
+  transaction_id  String
+  transaction     FinanceTransaction @relation(fields: [transaction_id], references: [id])
+  category_id     String
+  category        FinanceCategory    @relation(fields: [category_id], references: [id])
+  amount          Decimal  @db.Decimal(15, 2)
+  tax             Decimal  @db.Decimal(15, 2) @default(0)
+  description     String?
+}
+
+model FinanceDocument {
+  id             String   @id @default(uuid())
+  transaction_id String
+  transaction    FinanceTransaction @relation(fields: [transaction_id], references: [id])
+  document_type  String
+  file_url       String
+  
+  uploaded_by    String
+  user           User     @relation("UploadedFinanceDocs", fields: [uploaded_by], references: [id])
+  uploaded_at    DateTime @default(now())
+}
+
+model PettyCash {
+  id              String   @id @default(uuid())
+  company_id      String
+  company         Company  @relation(fields: [company_id], references: [id])
+  cash_account_id String
+  cash_account    CashAccount @relation(fields: [cash_account_id], references: [id])
+  employee_id     String
+  employee        User     @relation("PettyCashEmployee", fields: [employee_id], references: [id])
+  
+  opening_balance Decimal  @db.Decimal(15, 2)
+  current_balance Decimal  @db.Decimal(15, 2)
+  status          String   // ACTIVE, CLOSED
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model Budget {
+  id               String   @id @default(uuid())
+  company_id       String
+  company          Company  @relation(fields: [company_id], references: [id])
+  category_id      String
+  category         FinanceCategory @relation(fields: [category_id], references: [id])
+  department_id    String?
+  period           String   // e.g. "2026-07"
+  
+  budget_amount    Decimal  @db.Decimal(15, 2)
+  used_amount      Decimal  @db.Decimal(15, 2) @default(0)
+  remaining_amount Decimal  @db.Decimal(15, 2)
+  status           String   // ACTIVE, EXHAUSTED
+  
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
+
+model Reconciliation {
+  id               String   @id @default(uuid())
+  company_id       String
+  company          Company  @relation(fields: [company_id], references: [id])
+  cash_account_id  String
+  cash_account     CashAccount @relation(fields: [cash_account_id], references: [id])
+  period           String   // e.g. "2026-07"
+  
+  system_balance   Decimal  @db.Decimal(15, 2)
+  physical_balance Decimal  @db.Decimal(15, 2)
+  difference       Decimal  @db.Decimal(15, 2)
+  
+  approved_by      String?
+  approver         User?    @relation("ApprovedReconciliations", fields: [approved_by], references: [id])
+  status           String   // PENDING, APPROVED, ADJUSTED
+  
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+}
+
+// =======================
+// ACCOUNTING & GENERAL LEDGER (PHASE 6)
+// =======================
+
+model AccountType {
+  id             String   @id @default(uuid())
+  company_id     String
+  company        Company  @relation(fields: [company_id], references: [id])
+  code           String
+  name           String
+  normal_balance String   // Debit, Credit
+  description    String?
+  
+  accounts       ChartOfAccount[]
+
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  
+  @@unique([company_id, code])
+}
+
+model ChartOfAccount {
+  id                 String   @id @default(uuid())
+  company_id         String
+  company            Company  @relation(fields: [company_id], references: [id])
+  parent_id          String?
+  parent             ChartOfAccount? @relation("CoA_Hierarchy", fields: [parent_id], references: [id])
+  children           ChartOfAccount[] @relation("CoA_Hierarchy")
+  account_type_id    String
+  account_type       AccountType @relation(fields: [account_type_id], references: [id])
+  
+  account_code       String
+  account_name       String
+  currency           String   @default("IDR")
+  allow_manual_entry Boolean  @default(true)
+  is_header          Boolean  @default(false)
+  status             Boolean  @default(true)
+  
+  journal_items      JournalEntryItem[]
+  
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  deleted_at         DateTime?
+
+  @@unique([company_id, account_code])
+}
+
+model JournalEntry {
+  id              String   @id @default(uuid())
+  company_id      String
+  company         Company  @relation(fields: [company_id], references: [id])
+  journal_no      String
+  reference_type  String   // INVENTORY, ASSET, FINANCE, MANUAL
+  reference_id    String?
+  journal_date    DateTime
+  description     String?
+  status          String   // Draft, Pending, Approved, Posted, Closed
+  
+  created_by      String
+  user_created    User     @relation("CreatedJournals", fields: [created_by], references: [id])
+  approved_by     String?
+  user_approved   User?    @relation("ApprovedJournals", fields: [approved_by], references: [id])
+  approved_at     DateTime?
+  
+  items           JournalEntryItem[]
+  adjustments     JournalAdjustment[]
+  reversals_orig  JournalReversal[] @relation("OriginalJournal")
+  reversals_rev   JournalReversal[] @relation("ReverseJournal")
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  
+  @@unique([company_id, journal_no])
+}
+
+model JournalEntryItem {
+  id              String   @id @default(uuid())
+  journal_entry_id String
+  journal_entry   JournalEntry @relation(fields: [journal_entry_id], references: [id])
+  account_id      String
+  account         ChartOfAccount @relation(fields: [account_id], references: [id])
+  
+  debit           Decimal  @db.Decimal(15, 2) @default(0)
+  credit          Decimal  @db.Decimal(15, 2) @default(0)
+  description     String?
+}
+
+model FiscalYear {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  year        Int
+  start_date  DateTime
+  end_date    DateTime
+  status      String   // OPEN, CLOSED
+  
+  closed_at   DateTime?
+  closed_by   String?
+  closer      User?    @relation("ClosedFiscalYears", fields: [closed_by], references: [id])
+  
+  created_at  DateTime @default(now())
+  
+  @@unique([company_id, year])
+}
+
+model AccountingPeriod {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  month       Int
+  year        Int
+  start_date  DateTime
+  end_date    DateTime
+  status      String   // OPEN, CLOSED
+  
+  created_at  DateTime @default(now())
+  
+  @@unique([company_id, month, year])
+}
+
+model JournalAdjustment {
+  id               String   @id @default(uuid())
+  company_id       String
+  company          Company  @relation(fields: [company_id], references: [id])
+  journal_entry_id String
+  journal_entry    JournalEntry @relation(fields: [journal_entry_id], references: [id])
+  reason           String
+  
+  created_by       String
+  creator          User     @relation("CreatedAdjustments", fields: [created_by], references: [id])
+  approved_by      String?
+  approver         User?    @relation("ApprovedAdjustments", fields: [approved_by], references: [id])
+  
+  created_at       DateTime @default(now())
+}
+
+model JournalReversal {
+  id                  String   @id @default(uuid())
+  company_id          String
+  company             Company  @relation(fields: [company_id], references: [id])
+  
+  original_journal_id String
+  original_journal    JournalEntry @relation("OriginalJournal", fields: [original_journal_id], references: [id])
+  reverse_journal_id  String
+  reverse_journal     JournalEntry @relation("ReverseJournal", fields: [reverse_journal_id], references: [id])
+  
+  reason              String
+  created_by          String
+  creator             User     @relation("CreatedReversals", fields: [created_by], references: [id])
+  
+  created_at          DateTime @default(now())
+}
+
+// =======================
+// DASHBOARD & BUSINESS INTELLIGENCE (PHASE 7)
+// =======================
+
+model DashboardLayout {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  user_id     String
+  user        User     @relation("DashboardLayouts", fields: [user_id], references: [id])
+  name        String   // "Manager Layout", "Finance Default"
+  is_default  Boolean  @default(false)
+  layout_data Json     // JSON array of widget coordinates and sizes
+  
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  @@unique([user_id, name])
+}
+
+model DashboardWidget {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  widget_type String   // e.g. "LineChart", "PieChart", "KPICard"
+  data_source String   // e.g. "api/analytics/net-profit"
+  title       String
+  config      Json?    // Optional filter configs saved by user
+  
+  user_id     String
+  user        User     @relation("DashboardWidgets", fields: [user_id], references: [id])
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model BusinessInsight {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  insight_type String  // "Warning", "Recommendation", "Achievement"
+  title       String
+  description String
+  module      String   // "Inventory", "Asset", "Finance", "Accounting"
+  priority    String   // "LOW", "MEDIUM", "HIGH"
+  status      String   // "UNREAD", "READ", "RESOLVED"
+  
+  created_at  DateTime @default(now())
+}
+
+// =======================
+// REPORTING & DOCUMENT CENTER (PHASE 8)
+// =======================
+
+model ReportSchedule {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  name         String
+  report_type  String   // "Inventory", "Finance", "Accounting"
+  cron_expr    String   // e.g. "0 8 * * *"
+  recipients   String   // comma separated emails
+  status       Boolean  @default(true)
+  created_by   String
+  user         User     @relation("ScheduledReports", fields: [created_by], references: [id])
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model ReportExportLog {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  report_type  String
+  format       String   // "PDF", "EXCEL", "CSV"
+  status       String   // "PENDING", "PROCESSING", "COMPLETED", "FAILED"
+  file_url     String?
+  error_msg    String?
+  requested_by String
+  user         User     @relation("ExportLogs", fields: [requested_by], references: [id])
+  
+  started_at   DateTime @default(now())
+  completed_at DateTime?
+}
+
+model DocumentMaster {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  document_no  String   @unique
+  title        String
+  category     String   // "Invoice", "Purchase Order", "Contract"
+  tags         String?  // comma separated, e.g. "Urgent,Finance"
+  status       String   // "ACTIVE", "ARCHIVED"
+  
+  uploaded_by  String
+  user         User     @relation("UploadedDocuments", fields: [uploaded_by], references: [id])
+  
+  versions     DocumentVersion[]
+  shares       DocumentShareLink[]
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  
+  @@unique([company_id, document_no])
+}
+
+model DocumentVersion {
+  id                 String   @id @default(uuid())
+  document_master_id String
+  document_master    DocumentMaster @relation(fields: [document_master_id], references: [id])
+  version_number     Int
+  file_url           String
+  file_size          Int      // in bytes
+  mime_type          String
+  uploaded_by        String
+  user               User     @relation("UploadedDocumentVersions", fields: [uploaded_by], references: [id])
+  
+  created_at         DateTime @default(now())
+}
+
+model DocumentShareLink {
+  id                 String   @id @default(uuid())
+  document_master_id String
+  document_master    DocumentMaster @relation(fields: [document_master_id], references: [id])
+  token              String   @unique
+  password_hash      String?
+  expired_at         DateTime
+  
+  created_by         String
+  user               User     @relation("CreatedShareLinks", fields: [created_by], references: [id])
+  created_at         DateTime @default(now())
+}
+
+// =======================
+// WORKFLOW AUTOMATION PLATFORM (PHASE 9)
+// =======================
+
+model WorkflowMaster {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  name         String
+  description  String?
+  module       String   // "Inventory", "Finance", "Asset"
+  trigger_event String  // e.g. "InventoryTransaction.Created"
+  status       Boolean  @default(true)
+  version      Int      @default(1)
+  
+  nodes        WorkflowNode[]
+  edges        WorkflowEdge[]
+  logs         AutomationLog[]
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model WorkflowNode {
+  id                 String   @id @default(uuid())
+  workflow_master_id String
+  workflow_master    WorkflowMaster @relation(fields: [workflow_master_id], references: [id])
+  node_type          String   // "Start", "Condition", "Approval", "Notification", "Task", "End"
+  node_name          String
+  config             Json     // Rules, Emails, Roles, Conditions (AND/OR/>/<)
+  ui_position        Json     // {x: 100, y: 200} for Visual Editor
+  
+  created_at         DateTime @default(now())
+}
+
+model WorkflowEdge {
+  id                 String   @id @default(uuid())
+  workflow_master_id String
+  workflow_master    WorkflowMaster @relation(fields: [workflow_master_id], references: [id])
+  source_node_id     String
+  target_node_id     String
+  condition_label    String?  // e.g. "True", "False", "Approved", "Rejected"
+  
+  created_at         DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id              String   @id @default(uuid())
+  company_id      String
+  company         Company  @relation(fields: [company_id], references: [id])
+  module          String   // "Finance", "Inventory"
+  reference_id    String   // ID dari transaksi
+  title           String
+  description     String?
+  status          String   // "PENDING", "APPROVED", "REJECTED", "ESCALATED"
+  
+  current_step    Int      @default(1)
+  assigned_role   String?  // Jika approval berdasarkan role
+  assigned_user   String?  // Jika approval spesifik ke user
+  assignee        User?    @relation("PendingApprovals", fields: [assigned_user], references: [id])
+  
+  logs            ApprovalLog[]
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model ApprovalLog {
+  id                  String   @id @default(uuid())
+  approval_request_id String
+  approval_request    ApprovalRequest @relation(fields: [approval_request_id], references: [id])
+  action              String   // "APPROVED", "REJECTED", "ESCALATED"
+  notes               String?
+  
+  acted_by            String
+  actor               User     @relation("ApprovalHistory", fields: [acted_by], references: [id])
+  acted_at            DateTime @default(now())
+}
+
+model InternalInbox {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  user_id      String
+  user         User     @relation("UserInbox", fields: [user_id], references: [id])
+  message_type String   // "Approval", "Task", "Notification", "Reminder", "Announcement"
+  title        String
+  content      String
+  reference_id String?
+  is_read      Boolean  @default(false)
+  
+  created_at   DateTime @default(now())
+}
+
+model UserTask {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  assigned_to  String
+  assignee     User     @relation("UserTasks", fields: [assigned_to], references: [id])
+  title        String
+  description  String?
+  due_date     DateTime?
+  status       String   // "TODO", "IN_PROGRESS", "DONE", "OVERDUE"
+  priority     String   // "LOW", "MEDIUM", "HIGH"
+  reference_id String?  // ID dari modul terkait
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model NotificationTemplate {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  name         String
+  channel      String   // "EMAIL", "WHATSAPP", "IN_APP", "SLACK", "WEBHOOK"
+  subject      String?
+  body         String   // Support variables {{user}}, {{amount}}
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  
+  @@unique([company_id, name, channel])
+}
+
+model AutomationLog {
+  id                 String   @id @default(uuid())
+  company_id         String
+  company            Company  @relation(fields: [company_id], references: [id])
+  workflow_master_id String?
+  workflow_master    WorkflowMaster? @relation(fields: [workflow_master_id], references: [id])
+  event_name         String
+  status             String   // "SUCCESS", "FAILED", "RETRIED"
+  error_msg          String?
+  duration_ms        Int      @default(0)
+  
+  created_at         DateTime @default(now())
+}
+
+// =======================
+// PLATFORM SERVICES & SAAS (PHASE 10)
+// =======================
+
+model Tenant {
+  id           String   @id @default(uuid())
+  name         String
+  domain       String?  @unique // e.g. "client1.erp.com"
+  status       String   // "ACTIVE", "SUSPENDED", "CANCELLED"
+  
+  companies    Company[]
+  subscription TenantSubscription?
+  api_tokens   ApiToken[]
+  plugins      InstalledPlugin[]
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model SubscriptionPlan {
+  id              String   @id @default(uuid())
+  name            String   // "Starter", "Professional", "Enterprise"
+  price_monthly   Decimal  @db.Decimal(15, 2)
+  price_yearly    Decimal  @db.Decimal(15, 2)
+  
+  max_users       Int
+  max_warehouses  Int
+  max_assets      Int
+  storage_limit_mb Int
+  api_limit_day   Int
+  ai_credits_mo   Int
+  
+  subscriptions   TenantSubscription[]
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+}
+
+model TenantSubscription {
+  id           String   @id @default(uuid())
+  tenant_id    String   @unique
+  tenant       Tenant   @relation(fields: [tenant_id], references: [id])
+  plan_id      String
+  plan         SubscriptionPlan @relation(fields: [plan_id], references: [id])
+  
+  billing_cycle String  // "MONTHLY", "YEARLY"
+  status        String  // "TRIAL", "ACTIVE", "EXPIRED", "CANCELLED"
+  start_date    DateTime
+  end_date      DateTime
+  
+  invoices      BillingInvoice[]
+  
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+}
+
+model BillingInvoice {
+  id              String   @id @default(uuid())
+  subscription_id String
+  subscription    TenantSubscription @relation(fields: [subscription_id], references: [id])
+  invoice_no      String   @unique
+  amount          Decimal  @db.Decimal(15, 2)
+  status          String   // "UNPAID", "PAID", "FAILED"
+  due_date        DateTime
+  paid_at         DateTime?
+  payment_method  String?
+  payment_gateway_ref String?
+  
+  created_at      DateTime @default(now())
+}
+
+model ApiToken {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+  name        String
+  token_hash  String   @unique
+  scopes      String   // e.g. "read:inventory, write:finance"
+  last_used   DateTime?
+  
+  created_at  DateTime @default(now())
+}
+
+model InstalledPlugin {
+  id          String   @id @default(uuid())
+  tenant_id   String
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+  plugin_id   String   // Ref to Marketplace Global DB
+  status      String   // "ACTIVE", "INACTIVE"
+  config      Json?
+  
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  @@unique([tenant_id, plugin_id])
+}
