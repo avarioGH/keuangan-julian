@@ -14,20 +14,47 @@ export class FinanceController {
   @Get('summary')
   async getSummary(@Request() req) {
     const companyId = req.user.company_id;
-    // Basic aggregation for dashboard
+    // 1. Total Cash from all Cash Accounts
     const cashAccounts = await this.prisma.cashAccount.findMany({
       where: { company_id: companyId }
     });
     
     const totalCash = cashAccounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0);
     
-    // In a real app, calculate MTD Income/Expenses from GL or Transactions
-    // Placeholder logic for now:
+    // 2. Month-to-Date (MTD) calculations
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const mtdTransactions = await this.prisma.financeTransaction.findMany({
+      where: {
+        company_id: companyId,
+        transaction_date: {
+          gte: startOfMonth
+        },
+        status: {
+          in: ['Approved', 'COMPLETED']
+        }
+      }
+    });
+
+    let totalIncomeMtd = 0;
+    let totalExpensesMtd = 0;
+
+    for (const tx of mtdTransactions) {
+      if (tx.transaction_type === 'Cash In' || tx.transaction_type === 'Income') {
+        totalIncomeMtd += Number(tx.total_amount);
+      } else if (tx.transaction_type === 'Cash Out' || tx.transaction_type === 'Expense') {
+        totalExpensesMtd += Number(tx.total_amount);
+      }
+    }
+
+    const netProfitMtd = totalIncomeMtd - totalExpensesMtd;
+
     return {
       totalCash,
-      totalIncomeMtd: 45000000,
-      totalExpensesMtd: 12400000,
-      netProfitMtd: 32600000
+      totalIncomeMtd,
+      totalExpensesMtd,
+      netProfitMtd
     };
   }
 
