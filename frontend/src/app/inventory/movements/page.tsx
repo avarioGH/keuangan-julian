@@ -115,7 +115,7 @@ export default function MovementsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Warehouse</Label>
-                  <Select value={warehouseId} onValueChange={setWarehouseId} required>
+                  <Select value={warehouseId} onValueChange={(val) => setWarehouseId(val || "")} required>
                     <SelectTrigger><SelectValue placeholder="Select Warehouse" /></SelectTrigger>
                     <SelectContent>
                       {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
@@ -124,7 +124,7 @@ export default function MovementsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Product</Label>
-                  <Select value={productId} onValueChange={setProductId} required>
+                  <Select value={productId} onValueChange={(val) => setProductId(val || "")} required>
                     <SelectTrigger><SelectValue placeholder="Select Product" /></SelectTrigger>
                     <SelectContent>
                       {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
