@@ -81,6 +81,7 @@ export class InventoryService {
         company_id: data.companyId,
         code: data.code || `PRD-${Date.now()}`,
         name: data.name,
+        description: data.description,
         purchase_price: data.purchasePrice || 0,
         selling_price: data.sellingPrice || 0,
         unit_id: unit.id
