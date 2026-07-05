@@ -73,6 +73,10 @@ model Company {
   customers          Customer[]
   sales_orders       SalesOrder[]
 
+  // Phase 4 HR
+  departments        Department[]
+  employees          Employee[]
+
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
@@ -1450,4 +1454,97 @@ model SalesOrderItem {
 
   created_at       DateTime    @default(now())
   updated_at       DateTime    @updatedAt
+}
+
+// =======================
+// HR & PAYROLL (PHASE 4)
+// =======================
+
+model Department {
+  id          String   @id @default(uuid())
+  company_id  String
+  company     Company  @relation(fields: [company_id], references: [id])
+  name        String
+  description String?
+
+  employees   Employee[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  
+  @@unique([company_id, name])
+}
+
+model Employee {
+  id             String      @id @default(uuid())
+  company_id     String
+  company        Company     @relation(fields: [company_id], references: [id])
+  department_id  String?
+  department     Department? @relation(fields: [department_id], references: [id])
+  
+  employee_code  String
+  first_name     String
+  last_name      String?
+  email          String?
+  phone          String?
+  position       String?
+  join_date      DateTime?
+  status         String      // ACTIVE, RESIGNED, TERMINATED
+  
+  basic_salary   Decimal     @db.Decimal(15, 2) @default(0)
+  bank_name      String?
+  account_number String?
+  
+  attendances    Attendance[]
+  payrolls       Payroll[]
+
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  
+  @@unique([company_id, employee_code])
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  employee_id String
+  employee    Employee @relation(fields: [employee_id], references: [id])
+  date        DateTime
+  status      String   // PRESENT, ABSENT, LEAVE, SICK, LATE
+  check_in    DateTime?
+  check_out   DateTime?
+  notes       String?
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model Payroll {
+  id             String        @id @default(uuid())
+  employee_id    String
+  employee       Employee      @relation(fields: [employee_id], references: [id])
+  period         String        // e.g. "2026-07"
+  
+  basic_salary   Decimal       @db.Decimal(15, 2) @default(0)
+  total_allowance Decimal      @db.Decimal(15, 2) @default(0)
+  total_deduction Decimal      @db.Decimal(15, 2) @default(0)
+  net_salary     Decimal       @db.Decimal(15, 2) @default(0)
+  
+  status         String        // DRAFT, APPROVED, PAID
+  paid_date      DateTime?
+  
+  items          PayrollItem[]
+
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+}
+
+model PayrollItem {
+  id          String   @id @default(uuid())
+  payroll_id  String
+  payroll     Payroll  @relation(fields: [payroll_id], references: [id])
+  type        String   // ALLOWANCE, DEDUCTION
+  name        String
+  amount      Decimal  @db.Decimal(15, 2)
+
+  created_at  DateTime @default(now())
 }

@@ -39,7 +39,16 @@ const items = [
       { title: "Movements", url: "/inventory/movements" }
     ]
   },
-  { title: "HR & Payroll", url: "/hr", icon: Users },
+  { 
+    title: "HR & Payroll", 
+    url: "/hr", 
+    icon: Users,
+    subItems: [
+      { title: "Employees", url: "/hr/employees" },
+      { title: "Attendance", url: "/hr/attendance" },
+      { title: "Payroll", url: "/hr/payroll" }
+    ]
+  },
   { 
     title: "CRM", 
     url: "/crm", 
