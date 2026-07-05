@@ -27,8 +27,8 @@ RUN npm install --only=production
 COPY --from=builder /usr/src/app/prisma ./prisma
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Re-generate Prisma Client in production environment to ensure OS binary compatibility
-RUN npx prisma generate
+# Copy generated Prisma Client from builder
+COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 
 EXPOSE 3000
 
