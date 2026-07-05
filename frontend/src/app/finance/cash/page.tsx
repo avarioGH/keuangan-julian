@@ -15,6 +15,8 @@ export default function CashManagementPage() {
   
   const [showIn, setShowIn] = useState(false)
   const [showOut, setShowOut] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [formData, setFormData] = useState({ amount: "", description: "" })
 
   const fetchData = async () => {
@@ -183,7 +185,7 @@ export default function CashManagementPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {transactions.map((tx) => (
+                  {transactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tx) => (
                     <tr key={tx.id} className="hover:bg-muted/10 transition-colors">
                       <td className="p-4">{new Date(tx.transaction_date).toLocaleDateString()}</td>
                       <td className="p-4 font-mono text-xs text-muted-foreground">{tx.transaction_no}</td>
@@ -204,6 +206,33 @@ export default function CashManagementPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {transactions.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+              <div>
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, transactions.length)} to {Math.min(currentPage * itemsPerPage, transactions.length)} of {transactions.length} entries
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(transactions.length / itemsPerPage)))}
+                  disabled={currentPage === Math.ceil(transactions.length / itemsPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

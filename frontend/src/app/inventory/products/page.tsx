@@ -11,6 +11,8 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const [formData, setFormData] = useState({ 
     code: "",
     name: "", 
@@ -177,6 +179,7 @@ export default function ProductsPage() {
               </Button>
             </div>
           ) : (
+            <>
             <div className="overflow-x-auto border rounded-lg">
               <table className="w-full text-sm">
                 <thead>
@@ -189,7 +192,7 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {products.map((p) => (
+                  {products.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((p) => (
                     <tr key={p.id} className="hover:bg-muted/30 transition-colors group">
                       <td className="p-4 font-mono text-xs text-muted-foreground">{p.code}</td>
                       <td className="p-4 font-medium">{p.name}</td>
@@ -210,6 +213,34 @@ export default function ProductsPage() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            {products.length > itemsPerPage && (
+              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                <div>
+                  Showing {Math.min((currentPage - 1) * itemsPerPage + 1, products.length)} to {Math.min(currentPage * itemsPerPage, products.length)} of {products.length} entries
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(products.length / itemsPerPage)))}
+                    disabled={currentPage === Math.ceil(products.length / itemsPerPage)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>

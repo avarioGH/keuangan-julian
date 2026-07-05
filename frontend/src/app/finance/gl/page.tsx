@@ -9,6 +9,8 @@ export default function GeneralLedgerPage() {
   const [journals, setJournals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const fetchJournals = async () => {
     try {
@@ -114,7 +116,7 @@ export default function GeneralLedgerPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {journals.map(journal => (
+              {journals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map(journal => (
                 <div key={journal.id} className="border rounded-lg overflow-hidden shadow-sm">
                   <div className="bg-muted/40 p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b">
                     <div>
@@ -172,6 +174,33 @@ export default function GeneralLedgerPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {journals.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 text-sm text-muted-foreground">
+              <div>
+                Showing {Math.min((currentPage - 1) * itemsPerPage + 1, journals.length)} to {Math.min(currentPage * itemsPerPage, journals.length)} of {journals.length} journals
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(journals.length / itemsPerPage)))}
+                  disabled={currentPage === Math.ceil(journals.length / itemsPerPage)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
