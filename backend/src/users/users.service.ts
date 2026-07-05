@@ -8,12 +8,18 @@ export class UsersService {
 
   async createAdmin(data: any, creatorCompanyId: string) {
     // Cari role admin
-    const adminRole = await this.prisma.role.findFirst({
-      where: { name: 'Admin' }
+    let adminRole = await this.prisma.role.findFirst({
+      where: { name: 'Admin', company_id: creatorCompanyId }
     });
 
     if (!adminRole) {
-      throw new BadRequestException('Role Admin tidak ditemukan di sistem.');
+      adminRole = await this.prisma.role.create({
+        data: {
+          name: 'Admin',
+          company_id: creatorCompanyId,
+          description: 'Administrator with elevated privileges',
+        }
+      });
     }
 
     const existingUser = await this.prisma.user.findFirst({

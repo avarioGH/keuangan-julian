@@ -62,6 +62,7 @@ const items = [
 
 const settings = [
   { title: "Platform Services", url: "/platform", icon: Settings },
+  { title: "Users & Roles", url: "/settings/users", icon: Users },
   { title: "AI Insights", url: "/platform/ai", icon: Activity },
 ]
 
