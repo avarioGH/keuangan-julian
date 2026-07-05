@@ -12,7 +12,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Users, Box, Calculator, Settings, Building2, Briefcase, Plug, Activity } from "lucide-react"
+import { LayoutDashboard, Users, Box, Calculator, Settings, Activity, Briefcase } from "lucide-react"
+import { ThemeToggle } from "./theme-toggle"
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -24,9 +25,7 @@ const items = [
 
 const settings = [
   { title: "Platform Services", url: "/platform", icon: Settings },
-  { title: "Tenants", url: "/platform/tenants", icon: Building2 },
   { title: "AI Insights", url: "/platform/ai", icon: Activity },
-  { title: "Integrations", url: "/platform/integrations", icon: Plug },
 ]
 
 export function AppSidebar() {
@@ -79,8 +78,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
-        <div className="text-xs text-muted-foreground">Version 1.0.0 (SaaS)</div>
+      <SidebarFooter className="p-4 border-t flex flex-row items-center justify-between">
+        <div className="text-xs text-muted-foreground">Version 1.0.0 (Internal ERP)</div>
+        <ThemeToggle />
       </SidebarFooter>
     </Sidebar>
   )
