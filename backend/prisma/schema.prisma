@@ -69,6 +69,10 @@ model Company {
   notif_templates    NotificationTemplate[]
   automation_logs    AutomationLog[]
 
+  // Phase 2 CRM
+  customers          Customer[]
+  sales_orders       SalesOrder[]
+
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
@@ -322,6 +326,7 @@ model Product {
   transaction_items InventoryTransactionItem[]
   stock_movements   StockMovement[]
   warehouse_stocks  WarehouseStock[]
+  sales_order_items SalesOrderItem[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -1386,4 +1391,63 @@ model InstalledPlugin {
   updated_at  DateTime @updatedAt
   
   @@unique([tenant_id, plugin_id])
+}
+
+// =======================
+// CRM & SALES ORDERS (PHASE 2)
+// =======================
+
+model Customer {
+  id         String   @id @default(uuid())
+  company_id String
+  company    Company  @relation(fields: [company_id], references: [id])
+  code       String
+  name       String
+  phone      String?
+  email      String?
+  address    String?
+  status     Boolean  @default(true)
+
+  orders     SalesOrder[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  deleted_at DateTime?
+
+  @@unique([company_id, code])
+}
+
+model SalesOrder {
+  id               String   @id @default(uuid())
+  company_id       String
+  company          Company  @relation(fields: [company_id], references: [id])
+  customer_id      String
+  customer         Customer @relation(fields: [customer_id], references: [id])
+  order_number     String
+  order_date       DateTime
+  status           String   // DRAFT, PENDING, COMPLETED, CANCELLED
+  total_amount     Decimal  @db.Decimal(15, 2)
+  notes            String?
+
+  items            SalesOrderItem[]
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  deleted_at       DateTime?
+
+  @@unique([company_id, order_number])
+}
+
+model SalesOrderItem {
+  id               String      @id @default(uuid())
+  sales_order_id   String
+  sales_order      SalesOrder  @relation(fields: [sales_order_id], references: [id])
+  product_id       String
+  product          Product     @relation(fields: [product_id], references: [id])
+  qty              Int
+  unit_price       Decimal     @db.Decimal(15, 2)
+  subtotal         Decimal     @db.Decimal(15, 2)
+
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
 }

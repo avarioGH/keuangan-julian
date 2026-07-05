@@ -31,7 +31,15 @@ const items = [
   },
   { title: "Inventory", url: "/inventory", icon: Box },
   { title: "HR & Payroll", url: "/hr", icon: Users },
-  { title: "CRM", url: "/crm", icon: Briefcase },
+  { 
+    title: "CRM", 
+    url: "/crm", 
+    icon: Briefcase,
+    subItems: [
+      { title: "Customers", url: "/crm/customers" },
+      { title: "Sales Orders", url: "/crm/orders" }
+    ]
+  },
 ]
 
 const settings = [

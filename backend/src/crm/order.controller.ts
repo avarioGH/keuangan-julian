@@ -1,0 +1,120 @@
+import { Controller, Get, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+
+@UseGuards(JwtAuthGuard)
+@Controller('orders')
+export class OrderController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Get()
+  async getOrders(@Request() req) {
+    return this.prisma.salesOrder.findMany({
+      where: { company_id: req.user.company_id },
+      include: {
+        customer: true,
+        items: {
+          include: { product: true }
+        }
+      },
+      orderBy: { order_date: 'desc' }
+    });
+  }
+
+  @Post()
+  async createOrder(@Request() req, @Body() data: any) {
+    // Generate Order Number
+    const orderCount = await this.prisma.salesOrder.count({ where: { company_id: req.user.company_id }});
+    const orderNumber = `SO-${new Date().getFullYear()}-${String(orderCount + 1).padStart(4, '0')}`;
+
+    // Create the order transaction
+    return this.prisma.$transaction(async (tx) => {
+      let totalAmount = 0;
+      const orderItems = [];
+
+      for (const item of data.items) {
+        const product = await tx.product.findUnique({ where: { id: item.product_id } });
+        if (!product) throw new Error(`Product ${item.product_id} not found`);
+        
+        const subtotal = Number(product.selling_price) * item.qty;
+        totalAmount += subtotal;
+
+        orderItems.push({
+          product_id: product.id,
+          qty: item.qty,
+          unit_price: product.selling_price,
+          subtotal
+        });
+      }
+
+      const order = await tx.salesOrder.create({
+        data: {
+          company_id: req.user.company_id,
+          customer_id: data.customer_id,
+          order_number: orderNumber,
+          order_date: new Date(),
+          status: 'COMPLETED',
+          total_amount: totalAmount,
+          notes: data.notes,
+          items: {
+            create: orderItems
+          }
+        }
+      });
+
+      // Integrate with Finance (Auto Cash In)
+      // We need a Cash Account, let's just pick the first one or a default one
+      const cashAccount = await tx.cashAccount.findFirst({
+        where: { company_id: req.user.company_id }
+      });
+
+      if (cashAccount) {
+        await tx.financeTransaction.create({
+          data: {
+            company_id: req.user.company_id,
+            transaction_no: `FIN-${orderNumber}`,
+            transaction_type: 'Income',
+            cash_account_id: cashAccount.id,
+            transaction_date: new Date(),
+            status: 'COMPLETED',
+            description: `Payment for Order ${orderNumber}`,
+            total_amount: totalAmount,
+            created_by: req.user.userId
+          }
+        });
+        
+        // Update Cash Account Balance
+        await tx.cashAccount.update({
+          where: { id: cashAccount.id },
+          data: { current_balance: { increment: totalAmount } }
+        });
+      }
+
+      // Integrate with Inventory (Reduce Stock)
+      const warehouse = await tx.warehouse.findFirst({
+        where: { company_id: req.user.company_id }
+      });
+
+      if (warehouse) {
+        for (const item of orderItems) {
+          // Find or create warehouse stock
+          const stock = await tx.warehouseStock.findFirst({
+            where: { warehouse_id: warehouse.id, product_id: item.product_id }
+          });
+          
+          if (stock) {
+            await tx.warehouseStock.update({
+              where: { id: stock.id },
+              data: {
+                current_stock: { decrement: item.qty },
+                available_stock: { decrement: item.qty }
+              }
+            });
+          }
+        }
+      }
+
+      return order;
+    });
+  }
+}
