@@ -75,7 +75,14 @@ export class FinanceController {
     const dto: FinanceTransactionDto = {
       companyId: req.user.company_id,
       userId: req.user.userId,
-      ...data
+      transactionNo: data.transactionNo || `CI-${Date.now()}`,
+      transactionDate: data.transactionDate ? new Date(data.transactionDate) : new Date(),
+      amount: Number(data.amount),
+      description: data.description,
+      cashAccountId: data.cashAccountId,
+      categoryId: data.categoryId,
+      debitAccountId: data.debitAccountId,
+      creditAccountId: data.creditAccountId,
     };
     return this.financeService.createCashIn(dto);
   }
@@ -85,7 +92,14 @@ export class FinanceController {
     const dto: FinanceTransactionDto = {
       companyId: req.user.company_id,
       userId: req.user.userId,
-      ...data
+      transactionNo: data.transactionNo || `CO-${Date.now()}`,
+      transactionDate: data.transactionDate ? new Date(data.transactionDate) : new Date(),
+      amount: Number(data.amount),
+      description: data.description,
+      cashAccountId: data.cashAccountId,
+      categoryId: data.categoryId,
+      debitAccountId: data.debitAccountId,
+      creditAccountId: data.creditAccountId,
     };
     return this.financeService.createCashOut(dto);
   }
