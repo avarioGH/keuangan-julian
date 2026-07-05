@@ -30,7 +30,7 @@ export class OrderController {
     // Create the order transaction
     return this.prisma.$transaction(async (tx) => {
       let totalAmount = 0;
-      const orderItems = [];
+      const orderItems: any[] = [];
 
       for (const item of data.items) {
         const product = await tx.product.findUnique({ where: { id: item.product_id } });

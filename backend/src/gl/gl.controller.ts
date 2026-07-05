@@ -11,7 +11,7 @@ export class GlController {
   async getJournals(@Request() req) {
     return this.prisma.journalEntry.findMany({
       where: { company_id: req.user.company_id },
-      orderBy: { entry_date: 'desc' },
+      orderBy: { journal_date: 'desc' },
       take: 50,
       include: {
         items: true

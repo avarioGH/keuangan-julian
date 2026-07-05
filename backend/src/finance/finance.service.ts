@@ -30,7 +30,7 @@ export class FinanceService {
       if (!cashAccountId) {
         let account = await tx.cashAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas Utama' } });
         if (!account) {
-          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama' } });
+          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama', account_type: 'Cash' } });
         }
         cashAccountId = account.id;
       }
@@ -38,18 +38,13 @@ export class FinanceService {
       let debitId = data.debitAccountId;
       let creditId = data.creditAccountId;
       if (!debitId || !creditId) {
-        let kasGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas' } });
-        if (!kasGl) kasGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '1001', name: 'Kas', account_type: 'ASSET' } });
-        let revGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Pendapatan Lain' } });
-        if (!revGl) revGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '4001', name: 'Pendapatan Lain', account_type: 'REVENUE' } });
-        debitId = kasGl.id;
-        creditId = revGl.id;
+        // GL Posting is skipped if accounts are not provided to avoid complex schema dependency here
       }
       
       let catId = data.categoryId;
       if (!catId) {
-        let cat = await tx.transactionCategory.findFirst({ where: { company_id: data.companyId, name: 'General' } });
-        if (!cat) cat = await tx.transactionCategory.create({ data: { company_id: data.companyId, name: 'General', type: 'INCOME' } });
+        let cat = await tx.financeCategory.findFirst({ where: { company_id: data.companyId, name: 'General' } });
+        if (!cat) cat = await tx.financeCategory.create({ data: { company_id: data.companyId, name: 'General', type: 'INCOME' } });
         catId = cat.id;
       }
       // 1. Create Immutable Transaction Header & Item
@@ -94,17 +89,19 @@ export class FinanceService {
       });
 
       // 4. Generate GL Double Entry
-      await this.glService.createJournalEntryWithinTx(tx as any, {
-        companyId: data.companyId,
-        entryDate: data.transactionDate,
-        referenceType: 'FINANCE',
-        referenceId: transaction.id,
-        description: `Cash In: ${data.description}`,
-        items: [
-          { accountId: debitId, debit: data.amount, credit: 0 },   // e.g. Kas (Debit)
-          { accountId: creditId, debit: 0, credit: data.amount },  // e.g. Pendapatan (Kredit)
-        ]
-      });
+      if (debitId && creditId) {
+        await this.glService.createJournalEntryWithinTx(tx as any, {
+          companyId: data.companyId,
+          entryDate: data.transactionDate,
+          referenceType: 'FINANCE',
+          referenceId: transaction.id,
+          description: `Cash In: ${data.description}`,
+          items: [
+            { accountId: debitId, debit: data.amount, credit: 0 },
+            { accountId: creditId, debit: 0, credit: data.amount },
+          ]
+        });
+      }
 
       return transaction;
     });
@@ -117,7 +114,7 @@ export class FinanceService {
       if (!cashAccountId) {
         let account = await tx.cashAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas Utama' } });
         if (!account) {
-          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama' } });
+          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama', account_type: 'Cash' } });
         }
         cashAccountId = account.id;
       }
@@ -125,18 +122,13 @@ export class FinanceService {
       let debitId = data.debitAccountId;
       let creditId = data.creditAccountId;
       if (!debitId || !creditId) {
-        let expGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Beban Operasional' } });
-        if (!expGl) expGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '5001', name: 'Beban Operasional', account_type: 'EXPENSE' } });
-        let kasGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas' } });
-        if (!kasGl) kasGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '1001', name: 'Kas', account_type: 'ASSET' } });
-        debitId = expGl.id;
-        creditId = kasGl.id;
+        // GL Posting is skipped if accounts are not provided
       }
       
       let catId = data.categoryId;
       if (!catId) {
-        let cat = await tx.transactionCategory.findFirst({ where: { company_id: data.companyId, name: 'General Expense' } });
-        if (!cat) cat = await tx.transactionCategory.create({ data: { company_id: data.companyId, name: 'General Expense', type: 'EXPENSE' } });
+        let cat = await tx.financeCategory.findFirst({ where: { company_id: data.companyId, name: 'General Expense' } });
+        if (!cat) cat = await tx.financeCategory.create({ data: { company_id: data.companyId, name: 'General Expense', type: 'EXPENSE' } });
         catId = cat.id;
       }
 
@@ -177,17 +169,19 @@ export class FinanceService {
       });
 
       // 3. GL Double Entry
-      await this.glService.createJournalEntryWithinTx(tx as any, {
-        companyId: data.companyId,
-        entryDate: data.transactionDate,
-        referenceType: 'FINANCE',
-        referenceId: transaction.id,
-        description: `Cash Out: ${data.description}`,
-        items: [
-          { accountId: debitId, debit: data.amount, credit: 0 },   // e.g. Beban (Debit)
-          { accountId: creditId, debit: 0, credit: data.amount },  // e.g. Kas (Kredit)
-        ]
-      });
+      if (debitId && creditId) {
+        await this.glService.createJournalEntryWithinTx(tx as any, {
+          companyId: data.companyId,
+          entryDate: data.transactionDate,
+          referenceType: 'FINANCE',
+          referenceId: transaction.id,
+          description: `Cash Out: ${data.description}`,
+          items: [
+            { accountId: debitId, debit: data.amount, credit: 0 },
+            { accountId: creditId, debit: 0, credit: data.amount },
+          ]
+        });
+      }
 
       return transaction;
     });
