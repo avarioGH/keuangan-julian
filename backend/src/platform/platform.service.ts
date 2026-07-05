@@ -47,20 +47,49 @@ export class PlatformService {
    * Menyembunyikan kompleksitas vendor AI dari modul ERP lainnya.
    */
   async generateAiInsight(prompt: string, contextData: any, tenantId: string) {
-    // 1. Cek Kuota AI Tenant
-    // [TODO] Implement pengurangan AI Credits per request
     this.logger.log(`Generating AI Insight for Tenant: ${tenantId}`);
+    
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+      }
+      
+      const systemInstruction = "You are Avario AI, an advanced business intelligence assistant for an ERP system. Provide concise, actionable business insights based on the user prompt.";
+      
+      const payload = {
+        contents: [{
+          parts: [{ text: `${systemInstruction}\n\nContext Data (if any): ${JSON.stringify(contextData)}\n\nUser Question: ${prompt}` }]
+        }]
+      };
 
-    // 2. Tembak ke Provider (OpenAI / Anthropic)
-    // Di sinilah HTTP Request ke vendor dieksekusi.
-    // Untuk demo arsitektur, kita gunakan simulasi respons:
-    const mockResponse = `Based on the context data, we recommend reducing the safety stock for Product A by 15% due to a downward trend in Q3.`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
-    return {
-      success: true,
-      provider: 'OpenAI-GPT4',
-      insight: mockResponse
-    };
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini API Error: ${errText}`);
+      }
+
+      const data = await res.json();
+      const insight = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I am sorry, I could not generate an insight at this time.';
+
+      return {
+        success: true,
+        provider: 'Gemini-1.5-Flash',
+        insight: insight
+      };
+    } catch (e: any) {
+      this.logger.error(`AI Error: ${e.message}`);
+      return {
+        success: false,
+        provider: 'Gemini',
+        insight: 'Sorry, the AI service is currently unavailable. Please try again later.'
+      };
+    }
   }
 
   // --- Settings ---

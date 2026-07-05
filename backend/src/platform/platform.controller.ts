@@ -26,4 +26,10 @@ export class PlatformController {
   async createApiKey(@Request() req, @Body() data: any) {
     return this.platformService.createApiKey(req.user.company_id, data);
   }
+
+  @Post('ai/ask')
+  async askAi(@Request() req, @Body() data: { prompt: string, contextData?: any }) {
+    // Ideally use tenant_id from company, but here we can pass company_id as tenantId
+    return this.platformService.generateAiInsight(data.prompt, data.contextData || {}, req.user.company_id);
+  }
 }
