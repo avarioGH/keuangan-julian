@@ -1,5 +1,6 @@
 "use client"
 
+import { usePathname } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +17,6 @@ import {
   SidebarMenuSubButton
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, Users, Box, Calculator, Settings, Activity, Briefcase } from "lucide-react"
-import { ThemeToggle } from "./theme-toggle"
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -66,71 +66,95 @@ const settings = [
 ]
 
 export function AppSidebar() {
+  const pathname = usePathname()
+
+  const isActive = (url: string) => {
+    if (url === "/" && pathname !== "/") return false
+    return pathname.startsWith(url)
+  }
+
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4 flex flex-row items-center gap-2">
-        <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold">
+    <Sidebar className="border-r border-slate-200 dark:border-slate-800">
+      <SidebarHeader className="p-4 flex flex-row items-center gap-3">
+        <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-sm shadow-primary/25">
           E
         </div>
-        <span className="font-semibold text-lg">Avario ERP</span>
+        <span className="font-bold text-lg tracking-tight">Avario ERP</span>
       </SidebarHeader>
-      <SidebarContent>
+      
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel>Core Modules</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mt-2">Core Modules</SidebarGroupLabel>
+          <SidebarGroupContent className="mt-1">
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    render={
-                      <a href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </a>
-                    }
-                  />
-                  {item.subItems && (
-                    <SidebarMenuSub>
-                      {item.subItems.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <a href={subItem.url}>
-                            <SidebarMenuSubButton>
-                              <span>{subItem.title}</span>
-                            </SidebarMenuSubButton>
-                          </a>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  )}
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const active = isActive(item.url)
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      className={`font-medium transition-colors ${active ? 'bg-primary/10 text-primary hover:bg-primary/15' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                      render={
+                        <a href={item.url} className="flex items-center gap-3">
+                          <item.icon className={`h-4 w-4 ${active ? 'text-primary' : ''}`} />
+                          <span>{item.title}</span>
+                        </a>
+                      }
+                    />
+                    {item.subItems && (
+                      <SidebarMenuSub className="border-l-slate-200 dark:border-l-slate-700 ml-5 mt-1">
+                        {item.subItems.map((subItem) => {
+                          const subActive = pathname === subItem.url
+                          return (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <a href={subItem.url}>
+                                <SidebarMenuSubButton 
+                                  isActive={subActive}
+                                  className={`text-sm ${subActive ? 'text-primary font-medium bg-transparent' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'}`}
+                                >
+                                  <span>{subItem.title}</span>
+                                </SidebarMenuSubButton>
+                              </a>
+                            </SidebarMenuSubItem>
+                          )
+                        })}
+                      </SidebarMenuSub>
+                    )}
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
         
-        <SidebarGroup>
-          <SidebarGroupLabel>System & Platform</SidebarGroupLabel>
-          <SidebarGroupContent>
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">System & Platform</SidebarGroupLabel>
+          <SidebarGroupContent className="mt-1">
             <SidebarMenu>
-              {settings.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    render={
-                      <a href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </a>
-                    }
-                  />
-                </SidebarMenuItem>
-              ))}
+              {settings.map((item) => {
+                const active = isActive(item.url)
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      className={`font-medium transition-colors ${active ? 'bg-primary/10 text-primary hover:bg-primary/15' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                      render={
+                        <a href={item.url} className="flex items-center gap-3">
+                          <item.icon className={`h-4 w-4 ${active ? 'text-primary' : ''}`} />
+                          <span>{item.title}</span>
+                        </a>
+                      }
+                    />
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t flex flex-row items-center justify-between">
-        <div className="text-xs text-muted-foreground">Version 1.0.0 (Internal ERP)</div>
-        <ThemeToggle />
+      
+      <SidebarFooter className="p-4 border-t border-slate-200 dark:border-slate-800">
+        <div className="text-[11px] text-slate-400 font-medium">Version 1.0.0 (Internal ERP)</div>
       </SidebarFooter>
     </Sidebar>
   )
