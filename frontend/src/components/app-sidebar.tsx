@@ -11,13 +11,24 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton
 } from "@/components/ui/sidebar"
 import { LayoutDashboard, Users, Box, Calculator, Settings, Activity, Briefcase } from "lucide-react"
 import { ThemeToggle } from "./theme-toggle"
 
 const items = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Finance", url: "/finance", icon: Calculator },
+  { 
+    title: "Finance", 
+    url: "/finance", 
+    icon: Calculator,
+    subItems: [
+      { title: "Cash Management", url: "/finance/cash" },
+      { title: "General Ledger", url: "/finance/gl" }
+    ]
+  },
   { title: "Inventory", url: "/inventory", icon: Box },
   { title: "HR & Payroll", url: "/hr", icon: Users },
   { title: "CRM", url: "/crm", icon: Briefcase },
@@ -52,6 +63,17 @@ export function AppSidebar() {
                       </a>
                     }
                   />
+                  {item.subItems && (
+                    <SidebarMenuSub>
+                      {item.subItems.map((subItem) => (
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton asChild>
+                            <a href={subItem.url}>{subItem.title}</a>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
