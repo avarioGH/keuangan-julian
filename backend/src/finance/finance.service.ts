@@ -25,13 +25,40 @@ export class FinanceService {
 
   async createCashIn(data: FinanceTransactionDto) {
     return this.prisma.$transaction(async (tx) => {
+      // Auto-resolve missing accounts
+      let cashAccountId = data.cashAccountId;
+      if (!cashAccountId) {
+        let account = await tx.cashAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas Utama' } });
+        if (!account) {
+          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama' } });
+        }
+        cashAccountId = account.id;
+      }
+
+      let debitId = data.debitAccountId;
+      let creditId = data.creditAccountId;
+      if (!debitId || !creditId) {
+        let kasGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas' } });
+        if (!kasGl) kasGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '1001', name: 'Kas', account_type: 'ASSET' } });
+        let revGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Pendapatan Lain' } });
+        if (!revGl) revGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '4001', name: 'Pendapatan Lain', account_type: 'REVENUE' } });
+        debitId = kasGl.id;
+        creditId = revGl.id;
+      }
+      
+      let catId = data.categoryId;
+      if (!catId) {
+        let cat = await tx.transactionCategory.findFirst({ where: { company_id: data.companyId, name: 'General' } });
+        if (!cat) cat = await tx.transactionCategory.create({ data: { company_id: data.companyId, name: 'General', type: 'INCOME' } });
+        catId = cat.id;
+      }
       // 1. Create Immutable Transaction Header & Item
       const transaction = await tx.financeTransaction.create({
         data: {
           company_id: data.companyId,
           transaction_no: data.transactionNo,
           transaction_type: 'Cash In',
-          cash_account_id: data.cashAccountId,
+          cash_account_id: cashAccountId,
           transaction_date: data.transactionDate,
           status: 'Approved', // Langsung approved untuk demo immutable
           description: data.description,
@@ -51,7 +78,7 @@ export class FinanceService {
 
       // 2. Update Cash Account Balance
       await tx.cashAccount.update({
-        where: { id: data.cashAccountId },
+        where: { id: cashAccountId },
         data: { current_balance: { increment: data.amount } }
       });
 
@@ -74,8 +101,8 @@ export class FinanceService {
         referenceId: transaction.id,
         description: `Cash In: ${data.description}`,
         items: [
-          { accountId: data.debitAccountId, debit: data.amount, credit: 0 },   // e.g. Kas (Debit)
-          { accountId: data.creditAccountId, debit: 0, credit: data.amount },  // e.g. Pendapatan (Kredit)
+          { accountId: debitId, debit: data.amount, credit: 0 },   // e.g. Kas (Debit)
+          { accountId: creditId, debit: 0, credit: data.amount },  // e.g. Pendapatan (Kredit)
         ]
       });
 
@@ -85,8 +112,36 @@ export class FinanceService {
 
   async createCashOut(data: FinanceTransactionDto) {
     return this.prisma.$transaction(async (tx) => {
+      // Auto-resolve missing accounts
+      let cashAccountId = data.cashAccountId;
+      if (!cashAccountId) {
+        let account = await tx.cashAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas Utama' } });
+        if (!account) {
+          account = await tx.cashAccount.create({ data: { company_id: data.companyId, code: 'CASH-001', name: 'Kas Utama' } });
+        }
+        cashAccountId = account.id;
+      }
+
+      let debitId = data.debitAccountId;
+      let creditId = data.creditAccountId;
+      if (!debitId || !creditId) {
+        let expGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Beban Operasional' } });
+        if (!expGl) expGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '5001', name: 'Beban Operasional', account_type: 'EXPENSE' } });
+        let kasGl = await tx.glAccount.findFirst({ where: { company_id: data.companyId, name: 'Kas' } });
+        if (!kasGl) kasGl = await tx.glAccount.create({ data: { company_id: data.companyId, code: '1001', name: 'Kas', account_type: 'ASSET' } });
+        debitId = expGl.id;
+        creditId = kasGl.id;
+      }
+      
+      let catId = data.categoryId;
+      if (!catId) {
+        let cat = await tx.transactionCategory.findFirst({ where: { company_id: data.companyId, name: 'General Expense' } });
+        if (!cat) cat = await tx.transactionCategory.create({ data: { company_id: data.companyId, name: 'General Expense', type: 'EXPENSE' } });
+        catId = cat.id;
+      }
+
       // Validasi Saldo
-      const account = await tx.cashAccount.findUnique({ where: { id: data.cashAccountId } });
+      const account = await tx.cashAccount.findUnique({ where: { id: cashAccountId } });
       if (!account || Number(account.current_balance) < data.amount) {
         throw new BadRequestException('Insufficient balance in Cash Account');
       }
@@ -97,7 +152,7 @@ export class FinanceService {
           company_id: data.companyId,
           transaction_no: data.transactionNo,
           transaction_type: 'Cash Out',
-          cash_account_id: data.cashAccountId,
+          cash_account_id: cashAccountId,
           transaction_date: data.transactionDate,
           status: 'Approved',
           description: data.description,
@@ -117,7 +172,7 @@ export class FinanceService {
 
       // 2. Update Cash Account Balance (Decrement)
       await tx.cashAccount.update({
-        where: { id: data.cashAccountId },
+        where: { id: cashAccountId },
         data: { current_balance: { decrement: data.amount } }
       });
 
@@ -129,8 +184,8 @@ export class FinanceService {
         referenceId: transaction.id,
         description: `Cash Out: ${data.description}`,
         items: [
-          { accountId: data.debitAccountId, debit: data.amount, credit: 0 },   // e.g. Beban (Debit)
-          { accountId: data.creditAccountId, debit: 0, credit: data.amount },  // e.g. Kas (Kredit)
+          { accountId: debitId, debit: data.amount, credit: 0 },   // e.g. Beban (Debit)
+          { accountId: creditId, debit: 0, credit: data.amount },  // e.g. Kas (Kredit)
         ]
       });
 
