@@ -29,7 +29,16 @@ const items = [
       { title: "General Ledger", url: "/finance/gl" }
     ]
   },
-  { title: "Inventory", url: "/inventory", icon: Box },
+  { 
+    title: "Inventory", 
+    url: "/inventory", 
+    icon: Box,
+    subItems: [
+      { title: "Products", url: "/inventory/products" },
+      { title: "Warehouses", url: "/inventory/warehouses" },
+      { title: "Movements", url: "/inventory/movements" }
+    ]
+  },
   { title: "HR & Payroll", url: "/hr", icon: Users },
   { 
     title: "CRM", 

@@ -35,6 +35,71 @@ export interface CreateOutboundDto {
 export class InventoryService {
   constructor(private prisma: PrismaService) {}
 
+  async getProducts(companyId: string) {
+    return this.prisma.product.findMany({
+      where: { company_id: companyId },
+      include: { category: true, unit: true, brand: true },
+      orderBy: { created_at: 'desc' }
+    });
+  }
+
+  async getWarehouses(companyId: string) {
+    return this.prisma.warehouse.findMany({
+      where: { company_id: companyId },
+      orderBy: { created_at: 'desc' }
+    });
+  }
+
+  async getTransactions(companyId: string) {
+    return this.prisma.inventoryTransaction.findMany({
+      where: { company_id: companyId },
+      include: {
+        warehouse: true,
+        target_warehouse: true,
+        items: { include: { product: true } }
+      },
+      orderBy: { transaction_date: 'desc' }
+    });
+  }
+
+  async getWarehouseStocks(companyId: string) {
+    return this.prisma.warehouseStock.findMany({
+      where: { company_id: companyId },
+      include: { warehouse: true, product: true }
+    });
+  }
+
+  async createProduct(data: any) {
+    // We need a unit to create a product. Let's find or create a default 'PCS' unit.
+    let unit = await this.prisma.unit.findFirst({ where: { company_id: data.companyId, name: 'PCS' }});
+    if (!unit) {
+      unit = await this.prisma.unit.create({ data: { company_id: data.companyId, name: 'PCS' }});
+    }
+
+    return this.prisma.product.create({
+      data: {
+        company_id: data.companyId,
+        code: data.code || `PRD-${Date.now()}`,
+        name: data.name,
+        purchase_price: data.purchasePrice || 0,
+        selling_price: data.sellingPrice || 0,
+        unit_id: unit.id
+      }
+    });
+  }
+
+  async createWarehouse(data: any) {
+    return this.prisma.warehouse.create({
+      data: {
+        company_id: data.companyId,
+        code: data.code || `WH-${Date.now()}`,
+        name: data.name,
+        address: data.address,
+        pic: data.pic
+      }
+    });
+  }
+
   async createInbound(data: CreateInboundDto) {
     return this.prisma.$transaction(async (tx) => {
       // 1. Create Transaction Header
