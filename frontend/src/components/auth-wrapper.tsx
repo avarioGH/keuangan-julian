@@ -44,8 +44,10 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <div className="flex min-h-svh flex-1 flex-col overflow-hidden">
         <AppHeader />
-        <main className="flex-1 bg-muted/20">
-          {children}
+        <main className="flex-1 overflow-auto bg-muted/20 p-6 md:p-8">
+          <div className="mx-auto max-w-7xl">
+            {children}
+          </div>
         </main>
       </div>
     </SidebarProvider>
