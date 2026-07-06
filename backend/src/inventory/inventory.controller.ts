@@ -14,8 +14,13 @@ export class InventoryController {
 
   @Post('products')
   async createProduct(@Request() req, @Body() data: any) {
-    data.companyId = req.user.company_id;
-    return this.inventoryService.createProduct(data);
+    try {
+      data.companyId = req.user.company_id || req.user.companyId;
+      return await this.inventoryService.createProduct(data);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
+    }
   }
 
   @Get('warehouses')
