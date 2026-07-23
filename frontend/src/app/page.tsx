@@ -16,6 +16,8 @@ export default function Dashboard() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState("thisMonth")
+  const [warehouses, setWarehouses] = useState<any[]>([])
+  const [warehouseId, setWarehouseId] = useState("all")
 
   const timeRangeLabels: Record<string, string> = {
     thisMonth: "This Month",
@@ -24,11 +26,29 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    const fetchWarehouses = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`http://194.233.85.181:3001/inventory/warehouses`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const wData = await res.json()
+          setWarehouses(wData)
+        }
+      } catch (e) {
+        console.error("Failed to fetch warehouses:", e)
+      }
+    }
+    fetchWarehouses()
+  }, [])
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true)
       try {
         const token = localStorage.getItem("token")
-        const res = await fetch(`http://194.233.85.181:3001/analytics/dashboard?timeRange=${timeRange}`, {
+        const res = await fetch(`http://194.233.85.181:3001/analytics/dashboard?timeRange=${timeRange}&warehouseId=${warehouseId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         })
         if (res.ok) {
@@ -42,7 +62,7 @@ export default function Dashboard() {
     }
 
     fetchDashboardData()
-  }, [timeRange])
+  }, [timeRange, warehouseId])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount)
@@ -127,16 +147,30 @@ export default function Dashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">Overview</CardTitle>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger className="text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                  {timeRangeLabels[timeRange]} <ChevronRight className="inline h-3 w-3" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTimeRange("thisMonth")}>This Month</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTimeRange("lastMonth")}>Last Month</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTimeRange("thisYear")}>This Year</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center space-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    {warehouseId === "all" ? "Semua Gudang" : warehouses.find(w => w.id === warehouseId)?.name || "Pilih Gudang"} <ChevronRight className="inline h-3 w-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setWarehouseId("all")}>Semua Gudang</DropdownMenuItem>
+                  {warehouses.map(w => (
+                    <DropdownMenuItem key={w.id} onClick={() => setWarehouseId(w.id)}>{w.name}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    {timeRangeLabels[timeRange]} <ChevronRight className="inline h-3 w-3" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setTimeRange("thisMonth")}>This Month</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTimeRange("lastMonth")}>Last Month</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTimeRange("thisYear")}>This Year</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             
           </CardHeader>
           <CardContent className="flex-1 min-h-[300px]">

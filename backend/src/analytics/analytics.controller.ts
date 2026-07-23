@@ -8,8 +8,8 @@ export class AnalyticsController {
   constructor(private analyticsService: AnalyticsService) {}
 
   @Get('dashboard')
-  async getDashboardData(@Request() req, @Query('timeRange') timeRange: string) {
+  async getDashboardData(@Request() req, @Query('timeRange') timeRange: string, @Query('warehouseId') warehouseId?: string) {
     const companyId = req.user.company_id || req.user.companyId;
-    return this.analyticsService.getDashboardData(companyId, timeRange || 'thisMonth');
+    return this.analyticsService.getDashboardData(companyId, timeRange || 'thisMonth', warehouseId);
   }
 }

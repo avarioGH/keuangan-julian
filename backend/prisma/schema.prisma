@@ -225,6 +225,9 @@ model Warehouse {
   transactions_as_target InventoryTransaction[] @relation("TransactionTargetWarehouse")
   stock_movements        StockMovement[]
   warehouse_stocks       WarehouseStock[]
+  finance_transactions   FinanceTransaction[]
+  customers              Customer[]
+  employees              Employee[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -766,6 +769,8 @@ model FinanceTransaction {
   id               String   @id @default(uuid())
   company_id       String
   company          Company  @relation(fields: [company_id], references: [id])
+  warehouse_id     String?
+  warehouse        Warehouse? @relation(fields: [warehouse_id], references: [id])
   transaction_no   String
   transaction_type String   // Cash In, Cash Out, Transfer, Expense, Income, Adjustment
   cash_account_id  String
@@ -1405,6 +1410,8 @@ model Customer {
   id         String   @id @default(uuid())
   company_id String
   company    Company  @relation(fields: [company_id], references: [id])
+  warehouse_id String?
+  warehouse    Warehouse? @relation(fields: [warehouse_id], references: [id])
   code       String
   name       String
   phone      String?
@@ -1479,6 +1486,8 @@ model Employee {
   id             String      @id @default(uuid())
   company_id     String
   company        Company     @relation(fields: [company_id], references: [id])
+  warehouse_id   String?
+  warehouse      Warehouse?  @relation(fields: [warehouse_id], references: [id])
   department_id  String?
   department     Department? @relation(fields: [department_id], references: [id])
   

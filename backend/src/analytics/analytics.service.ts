@@ -129,7 +129,7 @@ export class AnalyticsService {
   /**
    * Main ERP Dashboard Data
    */
-  async getDashboardData(companyId: string, timeRange: string) {
+  async getDashboardData(companyId: string, timeRange: string, warehouseId?: string) {
     const now = new Date();
     let startDate = new Date();
     let prevStartDate = new Date();
@@ -157,15 +157,20 @@ export class AnalyticsService {
       prevEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
     }
 
+    const baseWhere: any = { company_id: companyId };
+    if (warehouseId && warehouseId !== 'all') {
+      baseWhere.warehouse_id = warehouseId;
+    }
+
     // Current period stats
     const currentTransactions = await this.prisma.financeTransaction.findMany({
-      where: { company_id: companyId, transaction_date: { gte: startDate, lte: now } },
+      where: { ...baseWhere, transaction_date: { gte: startDate, lte: now } },
       select: { total_amount: true, transaction_type: true, transaction_date: true }
     });
 
     // Previous period stats (for percentage change)
     const previousTransactions = await this.prisma.financeTransaction.findMany({
-      where: { company_id: companyId, transaction_date: { gte: prevStartDate, lte: prevEndDate } },
+      where: { ...baseWhere, transaction_date: { gte: prevStartDate, lte: prevEndDate } },
       select: { total_amount: true, transaction_type: true }
     });
 
@@ -227,17 +232,17 @@ export class AnalyticsService {
 
     // Active Customers and Employees
     const activeCustomers = await this.prisma.customer.count({
-      where: { company_id: companyId }
+      where: baseWhere
     });
     
     // Mock previous customers growth just for UI
     const customersGrowth = 5.2; 
 
     const activeEmployees = await this.prisma.employee.count({
-      where: { company_id: companyId, status: 'ACTIVE' }
+      where: { ...baseWhere, status: 'ACTIVE' }
     });
 
-    // Recent Activity (Audit logs)
+    // Recent Activity (Audit logs) - Audit logs don't have warehouse_id, so keep them company wide
     const recentActivity = await this.prisma.auditLog.findMany({
       where: { company_id: companyId },
       orderBy: { created_at: 'desc' },
