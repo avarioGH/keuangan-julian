@@ -51,6 +51,10 @@ export default function Dashboard() {
         const res = await fetch(`http://194.233.85.181:3001/analytics/dashboard?timeRange=${timeRange}&warehouseId=${warehouseId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         })
+        if (res.status === 401) {
+          window.location.href = '/login'
+          return
+        }
         if (res.ok) {
           setData(await res.json())
         }

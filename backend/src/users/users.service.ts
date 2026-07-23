@@ -46,6 +46,7 @@ export class UsersService {
         company_id: creatorCompanyId,
         role_id: adminRole.id,
         status: true,
+        accessible_modules: data.modules || [],
       },
       select: {
         id: true,
