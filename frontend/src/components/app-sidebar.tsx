@@ -16,63 +16,99 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton
 } from "@/components/ui/sidebar"
-import { LayoutDashboard, Users, Box, Calculator, Settings, Activity, Briefcase } from "lucide-react"
+import { 
+  LayoutDashboard, Users, Box, Calculator, Settings, 
+  ShoppingCart, ShieldAlert, BarChart3, Bot, Receipt,
+  Store, UserCheck, ArrowRightLeft, TrendingUp, TrendingDown
+} from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { TranslationKey } from "@/i18n/dictionaries"
 
 type MenuItem = {
-  titleKey: string;
+  title: string;
   url: string;
   icon: any;
-  subItems?: { titleKey: string; url: string }[];
+  subItems?: { title: string; url: string; badge?: string }[];
+  badge?: string;
 }
 
 const items: MenuItem[] = [
-  { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { 
-    titleKey: "sidebar.finance", 
+    title: "Keuangan", 
     url: "/finance", 
     icon: Calculator,
     subItems: [
-      { titleKey: "Cash Management", url: "/finance/cash" },
-      { titleKey: "General Ledger", url: "/finance/gl" }
+      { title: "Dashboard Keuangan", url: "/finance" },
+      { title: "Kas & Bank", url: "/finance/cash" },
+      { title: "Pemasukan", url: "/finance/income" },
+      { title: "Pengeluaran", url: "/finance/expense" },
+      { title: "Transfer", url: "/finance/transfer" },
+      { title: "Laporan Keuangan", url: "/finance/reports" }
     ]
   },
   { 
-    titleKey: "sidebar.inventory", 
+    title: "Inventaris", 
     url: "/inventory", 
     icon: Box,
     subItems: [
-      { titleKey: "Products", url: "/inventory/products" },
-      { titleKey: "Warehouses", url: "/inventory/warehouses" },
-      { titleKey: "Movements", url: "/inventory/movements" }
+      { title: "Produk", url: "/inventory/products" },
+      { title: "Stok Masuk", url: "/inventory/stock-in" },
+      { title: "Stok Keluar", url: "/inventory/stock-out" },
+      { title: "Transfer Gudang", url: "/inventory/stock-transfer" },
+      { title: "Penyesuaian Stok", url: "/inventory/stock-adjustment" },
+      { title: "Laporan Stok", url: "/inventory/reports" }
     ]
   },
   { 
-    titleKey: "sidebar.hr", 
-    url: "/hr", 
+    title: "POS (Kasir)", 
+    url: "/pos", 
+    icon: ShoppingCart,
+    subItems: [
+      { title: "Kasir POS", url: "/pos/new-transaction" },
+      { title: "Riwayat Penjualan", url: "/pos/order-history" },
+      { title: "Shift & Kas", url: "/pos/shift" }
+    ]
+  },
+  { 
+    title: "Pelanggan", 
+    url: "/customers", 
     icon: Users,
     subItems: [
-      { titleKey: "Employees", url: "/hr/employees" },
-      { titleKey: "Attendance", url: "/hr/attendance" },
-      { titleKey: "Payroll", url: "/hr/payroll" }
+      { title: "Pelanggan", url: "/customers/list" },
+      { title: "Loyalty & Poin", url: "/customers/loyalty" },
+      { title: "Voucher", url: "/customers/voucher" }
     ]
   },
   { 
-    titleKey: "sidebar.crm", 
-    url: "/crm", 
-    icon: Briefcase,
+    title: "AI Assistant", 
+    url: "/ai", 
+    icon: Bot,
+    badge: "Beta",
     subItems: [
-      { titleKey: "Customers", url: "/crm/customers" },
-      { titleKey: "Sales Orders", url: "/crm/orders" }
+      { title: "Chat AI", url: "/ai/chat" },
+      { title: "Analisis Inventaris", url: "/ai/inventory-analysis" },
+      { title: "Analisis Keuangan", url: "/ai/finance-analysis" },
+      { title: "Prediksi", url: "/ai/prediction" }
+    ]
+  },
+  { 
+    title: "Laporan", 
+    url: "/reports", 
+    icon: BarChart3,
+    subItems: [
+      { title: "Penjualan", url: "/reports/sales" },
+      { title: "Keuangan", url: "/reports/finance" },
+      { title: "Inventaris", url: "/reports/inventory" },
+      { title: "Karyawan", url: "/reports/employee" }
     ]
   },
 ]
 
 const settings: MenuItem[] = [
-  { titleKey: "Platform Services", url: "/platform", icon: Settings },
-  { titleKey: "sidebar.settings", url: "/settings/users", icon: Users },
-  { titleKey: "AI Insights", url: "/platform/ai", icon: Activity },
+  { title: "Pengguna & Role", url: "/settings/users", icon: UserCheck },
+  { title: "Pengaturan Sistem", url: "/settings/company", icon: Settings },
+  { title: "Audit Log", url: "/monitoring/audit-log", icon: ShieldAlert },
 ]
 
 export function AppSidebar() {
@@ -84,51 +120,60 @@ export function AppSidebar() {
     return pathname.startsWith(url)
   }
 
-  const getTitle = (key: string) => {
-    // If it's a known translation key, translate it, else return the key string
-    return key.includes(".") ? t(key as TranslationKey) : key
-  }
-
   return (
-    <Sidebar className="border-r border-slate-200 dark:border-slate-800">
+    <Sidebar className="border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0F172A]">
       <SidebarHeader className="p-4 flex flex-row items-center gap-3">
-        <div className="h-8 w-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold shadow-sm shadow-primary/25">
-          E
+        <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/20">
+          A
         </div>
-        <span className="font-bold text-lg tracking-tight">Avario ERP</span>
+        <span className="font-bold text-lg tracking-tight text-slate-900 dark:text-white">Avario ERP</span>
       </SidebarHeader>
       
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-3">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase mt-2">Core Modules</SidebarGroupLabel>
-          <SidebarGroupContent className="mt-1">
-            <SidebarMenu>
+          <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mt-4 mb-2 px-2">Core Modules</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1.5">
               {items.map((item) => {
                 const active = isActive(item.url)
                 return (
-                  <SidebarMenuItem key={item.titleKey}>
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       isActive={active}
-                      className={`font-medium transition-colors ${active ? 'bg-primary/10 text-primary hover:bg-primary/15' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                      className={`font-medium transition-all duration-200 rounded-md px-3 py-2 h-auto ${active ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
                       render={
-                        <a href={item.url} className="flex items-center gap-3">
-                          <item.icon className={`h-4 w-4 ${active ? 'text-primary' : ''}`} />
-                          <span>{getTitle(item.titleKey)}</span>
+                        <a href={item.url} className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-3">
+                            <item.icon className={`h-4 w-4 ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                            <span className="text-sm">{item.title}</span>
+                          </div>
+                          {item.badge && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold">
+                              {item.badge}
+                            </span>
+                          )}
                         </a>
                       }
                     />
                     {item.subItems && (
-                      <SidebarMenuSub className="border-l-slate-200 dark:border-l-slate-700 ml-5 mt-1">
+                      <SidebarMenuSub className="border-l-slate-200 dark:border-l-slate-800 ml-5 mt-1 mb-2">
                         {item.subItems.map((subItem) => {
                           const subActive = pathname === subItem.url
                           return (
-                            <SidebarMenuSubItem key={subItem.titleKey}>
+                            <SidebarMenuSubItem key={subItem.title}>
                               <a href={subItem.url}>
                                 <SidebarMenuSubButton 
                                   isActive={subActive}
-                                  className={`text-sm ${subActive ? 'text-primary font-medium bg-transparent' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'}`}
+                                  className={`text-sm py-1.5 h-auto transition-colors rounded-md ${subActive ? 'text-indigo-600 dark:text-indigo-400 font-medium bg-transparent' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/30'}`}
                                 >
-                                  <span>{getTitle(subItem.titleKey)}</span>
+                                  <span className="w-full flex justify-between items-center">
+                                    {subItem.title}
+                                    {subItem.badge && (
+                                      <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-[10px] font-bold">
+                                        {subItem.badge}
+                                      </span>
+                                    )}
+                                  </span>
                                 </SidebarMenuSubButton>
                               </a>
                             </SidebarMenuSubItem>
@@ -144,20 +189,20 @@ export function AppSidebar() {
         </SidebarGroup>
         
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">System & Platform</SidebarGroupLabel>
-          <SidebarGroupContent className="mt-1">
-            <SidebarMenu>
+          <SidebarGroupLabel className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-2 px-2">Pengaturan</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-1.5">
               {settings.map((item) => {
                 const active = isActive(item.url)
                 return (
-                  <SidebarMenuItem key={item.titleKey}>
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       isActive={active}
-                      className={`font-medium transition-colors ${active ? 'bg-primary/10 text-primary hover:bg-primary/15' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
+                      className={`font-medium transition-all duration-200 rounded-md px-3 py-2 h-auto ${active ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50'}`}
                       render={
                         <a href={item.url} className="flex items-center gap-3">
-                          <item.icon className={`h-4 w-4 ${active ? 'text-primary' : ''}`} />
-                          <span>{getTitle(item.titleKey)}</span>
+                          <item.icon className={`h-4 w-4 ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`} />
+                          <span className="text-sm">{item.title}</span>
                         </a>
                       }
                     />
@@ -169,12 +214,12 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-4">
+      <SidebarFooter className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-[#0F172A]">
         <a href="/login" className="flex items-center gap-3 text-slate-500 hover:text-rose-600 font-medium transition-colors" onClick={() => localStorage.removeItem("erp_token")}>
-          <div className="h-8 w-8 bg-slate-100 dark:bg-slate-800 rounded-md flex items-center justify-center group-hover:bg-rose-100 dark:group-hover:bg-rose-900/30">
+          <div className="h-8 w-8 bg-slate-100 dark:bg-slate-800/80 rounded-md flex items-center justify-center group-hover:bg-rose-100 dark:group-hover:bg-rose-900/30">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>
           </div>
-          <span>{t("sidebar.logout" as TranslationKey)}</span>
+          <span className="text-sm">Keluar</span>
         </a>
       </SidebarFooter>
     </Sidebar>
