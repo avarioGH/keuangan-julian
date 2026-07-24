@@ -181,11 +181,18 @@ export class AnalyticsService {
     let previousRevenue = 0;
     let previousSalesCount = 0;
 
-    // Chart Data Generation (Grouping by date string "MMM DD")
+    // Chart Data Generation (Grouping by date string "DD/MM")
     const chartMap = new Map<string, { date: string, revenue: number, expense: number }>();
     
-    // Initialize chart points depending on range (simplified to just dates with data, plus filling in between could be done)
-    // We will just map the existing data into the map.
+    // Pre-fill chart map with 0s for every day in the range to ensure continuous lines
+    let iterateDate = new Date(startDate);
+    while (iterateDate <= now) {
+      const dateKey = `${iterateDate.getDate().toString().padStart(2, '0')}/${(iterateDate.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (!chartMap.has(dateKey)) {
+        chartMap.set(dateKey, { date: dateKey, revenue: 0, expense: 0 });
+      }
+      iterateDate.setDate(iterateDate.getDate() + 1);
+    }
 
     currentTransactions.forEach(t => {
       const isIncome = t.transaction_type === 'Income' || t.transaction_type === 'Cash In';
