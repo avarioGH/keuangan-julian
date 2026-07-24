@@ -25,11 +25,15 @@ export class FinanceController {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const mtdTransactions = await this.prisma.financeTransaction.findMany({
+    // Previous Month calculations
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const transactions = await this.prisma.financeTransaction.findMany({
       where: {
         company_id: companyId,
         transaction_date: {
-          gte: startOfMonth
+          gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // 30 days ago for chart
         },
         status: {
           in: ['Approved', 'COMPLETED']
@@ -39,22 +43,79 @@ export class FinanceController {
 
     let totalIncomeMtd = 0;
     let totalExpensesMtd = 0;
+    let totalIncomeLastMonth = 0;
+    let totalExpensesLastMonth = 0;
 
-    for (const tx of mtdTransactions) {
-      if (tx.transaction_type === 'Cash In' || tx.transaction_type === 'Income') {
-        totalIncomeMtd += Number(tx.total_amount);
-      } else if (tx.transaction_type === 'Cash Out' || tx.transaction_type === 'Expense') {
-        totalExpensesMtd += Number(tx.total_amount);
+    // Chart Data Generation (Last 30 days)
+    const chartMap = new Map<string, { date: string, income: number, expenses: number }>();
+    
+    let iterateDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    while (iterateDate <= now) {
+      const dateKey = `${iterateDate.getDate().toString().padStart(2, '0')}/${(iterateDate.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (!chartMap.has(dateKey)) {
+        chartMap.set(dateKey, { date: dateKey, income: 0, expenses: 0 });
+      }
+      iterateDate.setDate(iterateDate.getDate() + 1);
+    }
+
+    for (const tx of transactions) {
+      const isIncome = tx.transaction_type === 'Cash In' || tx.transaction_type === 'Income';
+      const val = Number(tx.total_amount);
+      const txDate = new Date(tx.transaction_date);
+      
+      // MTD Check
+      if (txDate >= startOfMonth) {
+        if (isIncome) totalIncomeMtd += val;
+        else totalExpensesMtd += val;
+      }
+      // Last Month Check
+      else if (txDate >= startOfLastMonth && txDate <= endOfLastMonth) {
+        if (isIncome) totalIncomeLastMonth += val;
+        else totalExpensesLastMonth += val;
+      }
+
+      // Chart Data
+      const dateKey = `${txDate.getDate().toString().padStart(2, '0')}/${(txDate.getMonth() + 1).toString().padStart(2, '0')}`;
+      if (chartMap.has(dateKey)) {
+        const point = chartMap.get(dateKey)!;
+        if (isIncome) point.income += val;
+        else point.expenses += val;
       }
     }
 
     const netProfitMtd = totalIncomeMtd - totalExpensesMtd;
+    const netProfitLastMonth = totalIncomeLastMonth - totalExpensesLastMonth;
+
+    // Cash Last Month approximation (Current Cash - Net Profit MTD)
+    const totalCashLastMonth = totalCash - netProfitMtd;
+
+    const calculateGrowth = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? 100 : 0;
+      return ((current - previous) / Math.abs(previous)) * 100;
+    };
+
+    const incomeGrowth = calculateGrowth(totalIncomeMtd, totalIncomeLastMonth);
+    const expensesGrowth = calculateGrowth(totalExpensesMtd, totalExpensesLastMonth);
+    const profitGrowth = calculateGrowth(netProfitMtd, netProfitLastMonth);
+    const cashGrowth = calculateGrowth(totalCash, totalCashLastMonth);
+
+    const chartData = Array.from(chartMap.values()).sort((a, b) => {
+      const [dayA, monthA] = a.date.split('/');
+      const [dayB, monthB] = b.date.split('/');
+      if (monthA !== monthB) return Number(monthA) - Number(monthB);
+      return Number(dayA) - Number(dayB);
+    });
 
     return {
       totalCash,
+      cashGrowth,
       totalIncomeMtd,
+      incomeGrowth,
       totalExpensesMtd,
-      netProfitMtd
+      expensesGrowth,
+      netProfitMtd,
+      profitGrowth,
+      chartData
     };
   }
 
