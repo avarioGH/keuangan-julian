@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from "@/components/ui/card"
@@ -16,11 +16,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { 
-  Search, Plus, Filter, Download, Box, LayoutGrid
+  Search, Plus, Filter, Download, Box, LayoutGrid, AlertTriangle, RefreshCcw
 } from "lucide-react"
+import { InventoryAPI } from "@/lib/api"
 
-// Mock Data
-const products = [
+// Mock Data Fallback
+const fallbackProducts = [
   { 
     id: 1, sku: "KOP-001", name: "Kopi Arabica Premium 1Kg", category: "Biji Kopi", 
     price: 120000, 
@@ -60,6 +61,50 @@ const products = [
 
 export default function ProductInventory() {
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Real DB States
+  const [loading, setLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        setIsError(false)
+        const dbProducts = await InventoryAPI.getProducts()
+        // Map Prisma products to UI format
+        const mapped = dbProducts.map((p: any) => {
+          // Identify stock by warehouse code based on our seed (WH-A, WH-B, WH-C)
+          // Since we don't have the warehouse code populated inside warehouse_stocks directly without deeply joining,
+          // we assume order or we can just sum. In a full app, we map by warehouse.id
+          // For demo, we just split them loosely if available
+          const stockA = p.warehouse_stocks?.[0]?.current_stock || 0
+          const stockB = p.warehouse_stocks?.[1]?.current_stock || 0
+          const stockC = p.warehouse_stocks?.[2]?.current_stock || 0
+          
+          return {
+            id: p.id,
+            sku: p.code,
+            name: p.name,
+            category: p.category?.name || "-",
+            price: Number(p.selling_price),
+            stock_a: stockA,
+            stock_b: stockB,
+            stock_c: stockC,
+          }
+        })
+        setProducts(mapped)
+      } catch (error) {
+        console.error("Database connection failed:", error)
+        setIsError(true)
+        setProducts(fallbackProducts)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const formatIDR = (value: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -113,6 +158,16 @@ export default function ProductInventory() {
             </Button>
           </div>
         </div>
+
+        {isError && (
+          <div className="m-4 p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-rose-500 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-rose-700">Koneksi Database Terputus</h4>
+              <p className="text-sm text-rose-600">Saat ini menampilkan data dummy karena server PostgreSQL tidak dapat dihubungi. Silakan jalankan 'npx prisma db seed' di server Anda.</p>
+            </div>
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <Table>

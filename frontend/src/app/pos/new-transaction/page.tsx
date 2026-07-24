@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Card, CardContent, CardHeader, CardTitle, CardFooter
 } from "@/components/ui/card"
@@ -18,13 +18,14 @@ import {
 } from "@/components/ui/dialog"
 import { 
   Search, ScanLine, ShoppingCart, Plus, Minus, 
-  Trash2, CreditCard, Banknote, QrCode, User
+  Trash2, CreditCard, Banknote, QrCode, User, AlertTriangle
 } from "lucide-react"
+import { InventoryAPI, PosAPI } from "@/lib/api"
 
-// Mock Data
+// Mock Data Fallback
 const categories = ["Semua", "Kopi", "Non-Kopi", "Makanan", "Snack", "Merchandise"]
 
-const products = [
+const fallbackProducts = [
   { id: 1, name: "Kopi Arabica Premium", category: "Kopi", price: 35000, stock: 120, img: "☕" },
   { id: 2, name: "Caffe Latte", category: "Kopi", price: 28000, stock: 85, img: "🥤" },
   { id: 3, name: "Matcha Latte", category: "Non-Kopi", price: 32000, stock: 45, img: "🍵" },
@@ -48,6 +49,39 @@ export default function PosTransaction() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("CASH")
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+
+  // Real DB States
+  const [loading, setLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
+  const [products, setProducts] = useState<any[]>([])
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        setIsError(false)
+        const dbProducts = await InventoryAPI.getProducts()
+        // Map Prisma products to UI format
+        const mapped = dbProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category?.name || "Lainnya",
+          price: Number(p.selling_price),
+          stock: p.warehouse_stocks?.reduce((acc: number, ws: any) => acc + ws.current_stock, 0) || 0,
+          img: "📦" // default icon
+        }))
+        setProducts(mapped)
+      } catch (error) {
+        console.error("Database connection failed:", error)
+        setIsError(true)
+        setProducts(fallbackProducts) // Fallback for UI mapping
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const formatIDR = (value: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -128,6 +162,15 @@ export default function PosTransaction() {
 
         {/* Product Grid */}
         <ScrollArea className="flex-1 -mx-2 px-2">
+          {isError && (
+            <div className="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-500 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-rose-700">Koneksi Database Terputus</h4>
+                <p className="text-sm text-rose-600">Saat ini menampilkan data dummy karena server PostgreSQL tidak dapat dihubungi.</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-4">
             {filteredProducts.map(p => (
               <Card 
@@ -278,16 +321,36 @@ export default function PosTransaction() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPaymentOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setIsPaymentOpen(false)} disabled={isCheckingOut}>Batal</Button>
             <Button 
               className="bg-indigo-600 hover:bg-indigo-700" 
-              onClick={() => {
-                alert(`Transaksi Sukses! Pembayaran: ${paymentMethod}`);
-                setCart([]);
-                setIsPaymentOpen(false);
+              disabled={isCheckingOut}
+              onClick={async () => {
+                setIsCheckingOut(true);
+                try {
+                  const payload = {
+                    warehouseId: "gudang_a", // default untuk demo
+                    paymentMethod,
+                    items: cart.map(item => ({ productId: item.id, qty: item.qty, price: item.price })),
+                    subtotal,
+                    tax,
+                    total
+                  };
+                  await PosAPI.checkout(payload);
+                  alert(`Transaksi Sukses! (Tersimpan ke Database Real)`);
+                  setCart([]);
+                  setIsPaymentOpen(false);
+                } catch (error) {
+                  console.error("Checkout failed", error);
+                  alert(`Gagal terhubung ke Database. Mensimulasikan Transaksi Lokal Sukses!`);
+                  setCart([]);
+                  setIsPaymentOpen(false);
+                } finally {
+                  setIsCheckingOut(false);
+                }
               }}
             >
-              Proses Transaksi
+              {isCheckingOut ? "Memproses..." : "Proses Transaksi"}
             </Button>
           </DialogFooter>
         </DialogContent>

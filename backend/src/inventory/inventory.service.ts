@@ -38,7 +38,7 @@ export class InventoryService {
   async getProducts(companyId: string) {
     return this.prisma.product.findMany({
       where: { company_id: companyId },
-      include: { category: true, unit: true, brand: true },
+      include: { category: true, unit: true, brand: true, warehouse_stocks: true },
       orderBy: { created_at: 'desc' }
     });
   }

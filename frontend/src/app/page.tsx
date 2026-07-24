@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Card, CardContent, CardDescription, CardHeader, CardTitle 
 } from "@/components/ui/card"
@@ -9,14 +9,15 @@ import {
 } from "@/components/ui/select"
 import { 
   TrendingUp, TrendingDown, DollarSign, Package, 
-  CreditCard, Users, Activity, ShoppingCart, AlertCircle, ArrowUpRight, ArrowDownRight, Award
+  CreditCard, Users, Activity, ShoppingCart, AlertCircle, ArrowUpRight, ArrowDownRight, Award, AlertTriangle, RefreshCcw
 } from "lucide-react"
 import { 
   Area, AreaChart, Bar, BarChart, CartesianGrid, 
   ResponsiveContainer, Tooltip, XAxis, YAxis 
 } from "recharts"
+import { DashboardAPI } from "@/lib/api"
 
-const salesData = [
+const fallbackSalesData = [
   { date: "1 Jul", sales: 12500000, profit: 4500000 },
   { date: "5 Jul", sales: 15000000, profit: 5500000 },
   { date: "10 Jul", sales: 18000000, profit: 7000000 },
@@ -26,7 +27,7 @@ const salesData = [
   { date: "30 Jul", sales: 25000000, profit: 9500000 },
 ]
 
-const expenseData = [
+const fallbackExpenseData = [
   { name: "Minggu 1", income: 35000000, expense: 12000000 },
   { name: "Minggu 2", income: 42000000, expense: 15000000 },
   { name: "Minggu 3", income: 38000000, expense: 14000000 },
@@ -35,6 +36,28 @@ const expenseData = [
 
 export default function OwnerDashboard() {
   const [warehouse, setWarehouse] = useState("all")
+  
+  // Real DB States
+  const [loading, setLoading] = useState(true)
+  const [isError, setIsError] = useState(false)
+  const [kpi, setKpi] = useState<any>(null)
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        setIsError(false)
+        const data = await DashboardAPI.getKPIs('thisMonth', warehouse)
+        setKpi(data)
+      } catch (error) {
+        console.error("Database connection failed:", error)
+        setIsError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [warehouse])
 
   // Helper to format currency
   const formatIDR = (value: number) => {
@@ -44,6 +67,39 @@ export default function OwnerDashboard() {
       maximumFractionDigits: 0
     }).format(value)
   }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 animate-pulse">
+        <RefreshCcw className="w-10 h-10 text-indigo-500 animate-spin" />
+        <p className="text-slate-500 font-medium">Menghubungkan ke Database Real...</p>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 animate-in fade-in zoom-in duration-300">
+        <div className="w-24 h-24 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mb-6">
+          <AlertTriangle className="w-12 h-12 text-rose-600 dark:text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Koneksi Database Terputus</h2>
+        <p className="text-slate-500 dark:text-slate-400 max-w-md mb-8">
+          Aplikasi gagal mengambil data real dari server PostgreSQL. Pastikan database Anda sedang berjalan di port 5432 dan backend NestJS aktif.
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-2.5 rounded-lg font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors flex items-center gap-2"
+        >
+          <RefreshCcw className="w-4 h-4" /> Coba Lagi
+        </button>
+      </div>
+    )
+  }
+
+  // Gunakan data dari API, jika undefined (fallback ke mock untuk mencegah crash chart)
+  const displaySales = kpi?.salesData || fallbackSalesData;
+  const displayExpense = kpi?.expenseData || fallbackExpenseData;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
@@ -77,7 +133,7 @@ export default function OwnerDashboard() {
           </div>
           <CardHeader className="pb-2 relative z-10">
             <CardDescription className="text-indigo-100 font-medium tracking-wide uppercase text-xs">Penjualan Hari Ini</CardDescription>
-            <CardTitle className="text-3xl font-bold">{formatIDR(12500000)}</CardTitle>
+            <CardTitle className="text-3xl font-bold">{formatIDR(kpi?.currentRevenue || 12500000)}</CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="flex items-center gap-2 text-sm">
@@ -95,7 +151,7 @@ export default function OwnerDashboard() {
           </div>
           <CardHeader className="pb-2 relative z-10">
             <CardDescription className="text-emerald-100 font-medium tracking-wide uppercase text-xs">Profit Bulan Ini</CardDescription>
-            <CardTitle className="text-3xl font-bold">{formatIDR(45800000)}</CardTitle>
+            <CardTitle className="text-3xl font-bold">{formatIDR(kpi?.netProfit || 45800000)}</CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="flex items-center gap-2 text-sm">
@@ -113,7 +169,7 @@ export default function OwnerDashboard() {
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="font-medium tracking-wide uppercase text-xs text-slate-500">Total Cash Flow</CardDescription>
-            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">{formatIDR(185000000)}</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">{formatIDR(kpi?.cashPosition || 185000000)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm">
@@ -131,7 +187,7 @@ export default function OwnerDashboard() {
           </div>
           <CardHeader className="pb-2">
             <CardDescription className="font-medium tracking-wide uppercase text-xs text-slate-500">Total Nilai Stok</CardDescription>
-            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">{formatIDR(850500000)}</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">{formatIDR(kpi?.inventoryValue || 850500000)}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2 text-sm">
@@ -156,7 +212,7 @@ export default function OwnerDashboard() {
           <CardContent>
             <div className="h-[350px] mt-4 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={displaySales} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -196,7 +252,7 @@ export default function OwnerDashboard() {
           <CardContent>
             <div className="h-[350px] mt-4 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expenseData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barSize={20}>
+                <BarChart data={displayExpense} margin={{ top: 10, right: 10, left: 0, bottom: 0 }} barSize={20}>
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#888888' }} dy={10} />
                   <YAxis 
                     axisLine={false} 
