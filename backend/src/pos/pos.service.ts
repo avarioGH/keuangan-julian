@@ -19,7 +19,6 @@ export class PosService {
           order_date: new Date(),
           status: 'COMPLETED',
           total_amount: total,
-          tax_amount: tax,
           payment_status: 'PAID',
           payment_method: paymentMethod || 'CASH',
         }
@@ -32,9 +31,9 @@ export class PosService {
           data: {
             sales_order_id: salesOrder.id,
             product_id: item.productId,
-            quantity: item.qty,
+            qty: item.qty,
             unit_price: item.price,
-            total_price: item.qty * item.price,
+            subtotal: item.qty * item.price,
           }
         });
 
@@ -72,10 +71,12 @@ export class PosService {
           data: {
             company_id: companyId,
             cash_account_id: cashAccount.id,
-            transaction_type: 'INCOME',
+            transaction_no: `TRX-${Date.now()}`,
+            transaction_type: 'Income',
             transaction_date: new Date(),
-            amount: total,
-            reference_no: soNo,
+            total_amount: total,
+            reference_type: 'POS',
+            reference_id: salesOrder.id,
             description: `Penjualan POS #${soNo}`,
             status: 'COMPLETED',
             created_by: userId,
@@ -101,7 +102,7 @@ export class PosService {
           action: 'CREATE',
           entity: 'POS_Transaction',
           entity_id: salesOrder.id,
-          details: `Kasir memproses transaksi ${soNo} senilai ${total}`
+          after_data: { details: `Kasir memproses transaksi ${soNo} senilai ${total}` }
         }
       });
 
