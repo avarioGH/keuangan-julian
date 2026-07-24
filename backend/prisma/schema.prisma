@@ -76,6 +76,10 @@ model Company {
   // Phase 4 HR
   departments        Department[]
   employees          Employee[]
+  
+  // Phase 10 AI
+  ai_chats           AiChatHistory[]
+  pos_shifts         PosShift[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -204,6 +208,8 @@ model User {
   approval_history         ApprovalLog[]       @relation("ApprovalHistory")
   inbox_messages           InternalInbox[]     @relation("UserInbox")
   tasks                    UserTask[]          @relation("UserTasks")
+  pos_shifts               PosShift[]          @relation("UserPosShifts")
+  ai_chats                 AiChatHistory[]     @relation("UserAiChats")
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -229,6 +235,7 @@ model Warehouse {
   finance_transactions   FinanceTransaction[]
   customers              Customer[]
   employees              Employee[]
+  pos_shifts             PosShift[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -1418,6 +1425,8 @@ model Customer {
   phone      String?
   email      String?
   address    String?
+  point      Int      @default(0)
+  level      String   @default("Bronze") // Bronze, Silver, Gold, Platinum
   status     Boolean  @default(true)
 
   orders     SalesOrder[]
@@ -1440,6 +1449,10 @@ model SalesOrder {
   status           String   // DRAFT, PENDING, COMPLETED, CANCELLED
   total_amount     Decimal  @db.Decimal(15, 2)
   notes            String?
+  pos_shift_id     String?
+  pos_shift        PosShift? @relation(fields: [pos_shift_id], references: [id])
+  payment_method   String?   // Cash, QRIS, Debit, Credit, Transfer, Split
+  payment_status   String?   // UNPAID, PARTIAL, PAID
 
   items            SalesOrderItem[]
 
@@ -1462,6 +1475,40 @@ model SalesOrderItem {
 
   created_at       DateTime    @default(now())
   updated_at       DateTime    @updatedAt
+}
+
+model PosShift {
+  id           String   @id @default(uuid())
+  company_id   String
+  company      Company  @relation(fields: [company_id], references: [id])
+  warehouse_id String
+  warehouse    Warehouse @relation(fields: [warehouse_id], references: [id])
+  user_id      String
+  user         User     @relation("UserPosShifts", fields: [user_id], references: [id])
+  
+  start_time   DateTime @default(now())
+  end_time     DateTime?
+  starting_cash Decimal @db.Decimal(15, 2)
+  ending_cash  Decimal? @db.Decimal(15, 2)
+  status       String   // OPEN, CLOSED
+  
+  sales        SalesOrder[]
+  
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model AiChatHistory {
+  id         String   @id @default(uuid())
+  company_id String
+  company    Company  @relation(fields: [company_id], references: [id])
+  user_id    String
+  user       User     @relation("UserAiChats", fields: [user_id], references: [id])
+  prompt     String
+  response   String   @db.Text
+  module     String?
+  
+  created_at DateTime @default(now())
 }
 
 // =======================
